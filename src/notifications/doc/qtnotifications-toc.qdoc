@@ -1,0 +1,19 @@
+// Copyright (C) 2025 The Qt Company Ltd.
+// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GFDL-1.3-no-invariants-only
+
+/*!
+    \page qtnotifications-toc.html
+    \title Qt Notifications module topics
+
+    The following list has links to all the individual topics (HTML files)
+    in the Qt Notifications module.
+
+    \list
+        \li \l {Qt Notifications C++ Classes}{C++ Classes}
+        \li \l {Qt Notifications QML Types}{QML Types}
+        \li \l {Qt Notifications Engines}{Platform Engines}
+        \li \l {Qt Notifications Examples}{Examples}
+    \endlist
+
+*/
+

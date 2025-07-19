@@ -1,0 +1,58 @@
+// Copyright (C) 2025 The Qt Company Ltd.
+// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GFDL-1.3-no-invariants-only
+
+/*!
+    \title Qt Notifications
+    \page qtnotifications-index.html
+    \brief Provides functionality for sending system notifications.
+
+    The Qt Notifications module enables you to send notifications to the user's
+    desktop notification system. It supports different notification types, custom
+    icons, and action buttons.
+
+    Qt Notifications is built on Qt 6 and provides a cross-platform API for
+    displaying system notifications on Linux, Windows, macOS, and Android.
+
+    \section1 Using the Module
+
+    \section2 QtNotifications QML API
+
+    \include {module-use.qdocinc} {using the qml api} {QtNotifications}
+
+    \section2 C++ API
+
+    \include {module-use.qdocinc} {using the c++ api}
+
+    \section3 Building with CMake
+
+    \include {module-use.qdocinc} {building with cmake} {Notifications}
+
+    \section3 Building with qmake
+
+    \include {module-use.qdocinc} {building_with_qmake} {notifications}
+
+    \section1 API Reference
+    \list
+        \li \l{Qt Notifications C++ Classes}
+        \li \l{Qt Notifications QML Types}
+    \endlist
+
+    \section1 Platform Engines
+    \list
+        \li \l{Qt Notifications Engines}
+    \endlist
+
+    \section1 Examples
+    \list
+        \li \l{Qt Notifications Examples}
+    \endlist
+
+    \section1 Licenses and Attributions
+    Qt Notifications is available under commercial licenses
+    from \l{The Qt Company}.
+    In addition, it is available under the
+    \l{GNU Lesser General Public License, version 3}, or
+    the \l{GNU General Public License, version 2}.
+    See \l{Qt Licensing} for further details.
+*/
+
