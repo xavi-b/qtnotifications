@@ -1,0 +1,100 @@
+# Build directories
+build/
+_build/
+out/
+debug/
+release/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+!CMakeLists.txt
+!*.cmake.in
+
+# Qt specific
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+*.qm
+*.moc
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# IDE files
+.vscode/
+.idea/
+*.pro.user
+*.pro.user.*
+*.qbs.user
+*.qbs.user.*
+*.moc.user
+*.moc.user.*
+*.qmake.stash
+*.txt.user*
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*~
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# Log files
+*.log
+
+# Coverage reports
+*.gcov
+*.gcda
+*.gcno
+
+# Android specific
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# iOS specific
+*.ipa
+*.app.dSYM
+
+# Windows specific
+*.pdb
+*.ilk
+*.exp
+
