@@ -121,6 +121,21 @@ Java_org_qtproject_qt_android_notifications_QtNotificationsActionReceiver_notify
         Qt::QueuedConnection);
 }
 
+JNIEXPORT void JNICALL
+Java_org_qtproject_qt_android_notifications_QtNotificationsActionReceiver_notifyNotificationClicked(JNIEnv *env,
+                                                                                                     jobject thiz,
+                                                                                                     jlong id)
+{
+    Q_UNUSED(env)
+    Q_UNUSED(thiz)
+
+    // Emit signal on main thread
+    QMetaObject::invokeMethod(
+        QCoreApplication::instance(),
+        [id]() { emit qt_create_notification_engine_android()->notificationClicked(id); },
+        Qt::QueuedConnection);
+}
+
 } // extern "C"
 
 QPlatformNotificationEngine *qt_create_notification_engine_android()

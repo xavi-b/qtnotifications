@@ -1,7 +1,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <application>
-        <receiver android:name=".QtNotificationsActionReceiver"/>
+        <receiver
+            android:name="org.qtproject.qt.android.notifications.QtNotificationsActionReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="org.qtproject.qt.android.notifications.ACTION_NOTIFICATION" />
+                <action android:name="org.qtproject.qt.android.notifications.ACTION_NOTIFICATION_CLOSED" />
+                <action android:name="org.qtproject.qt.android.notifications.ACTION_NOTIFICATION_CLICKED" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

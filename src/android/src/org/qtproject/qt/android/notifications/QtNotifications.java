@@ -65,13 +65,25 @@ class QtNotifications
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
             );
 
+            // Create content intent for notification click
+            Intent contentIntent = new Intent(mContext, QtNotificationsActionReceiver.class);
+            contentIntent.setAction(QtNotificationsActionReceiver.ACTION_NOTIFICATION_CLICKED);
+            contentIntent.putExtra("notification_id", mNotificationId);
+            PendingIntent contentPendingIntent = PendingIntent.getBroadcast(
+                mContext,
+                mNotificationId + 10000, // Use different request code to avoid conflicts
+                contentIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+
             // Build notification
             Notification.Builder builder = new Notification.Builder(mContext, CHANNEL_ID)
                 .setContentTitle(title)
                 .setContentText(text)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setAutoCancel(true)
-                .setDeleteIntent(dismissPendingIntent);
+                .setDeleteIntent(dismissPendingIntent)
+                .setContentIntent(contentPendingIntent);
 
             // Set notification type icon if available
             if (type > 0) {
