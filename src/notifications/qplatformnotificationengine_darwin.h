@@ -22,6 +22,7 @@ public:
 
     void handleActionInvoked(uint notificationId, const QString &actionKey);
     void handleNotificationClosed(uint notificationId, uint reason);
+    void handleNotificationClicked(uint notificationId);
 
     bool isSupported() const override;
     bool sendNotification(const QString &title,
