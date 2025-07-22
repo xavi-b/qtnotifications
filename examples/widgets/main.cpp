@@ -98,6 +98,11 @@ private:
         updateStatus(QString("Action invoked for notification %1: %2").arg(notificationId).arg(actionText));
     }
 
+    void onNotificationClicked(uint notificationId)
+    {
+        updateStatus(QString("Notification %1 was clicked!").arg(notificationId));
+    }
+
     void browseIconFile()
     {
         QString fileName = QFileDialog::getOpenFileName(this,
@@ -201,6 +206,8 @@ private:
                 this, &NotificationsWidget::onNotificationClosed);
         connect(notifications, &QNotifications::actionInvoked,
                 this, &NotificationsWidget::onActionInvoked);
+        connect(notifications, &QNotifications::notificationClicked,
+                this, &NotificationsWidget::onNotificationClicked);
     }
 
     QNotifications::NotificationType getNotificationType()

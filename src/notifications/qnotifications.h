@@ -48,6 +48,7 @@ public:
 Q_SIGNALS:
     void actionInvoked(uint notificationId, const QString &actionKey);
     void notificationClosed();
+    void notificationClicked(uint notificationId);
 
 private:
     Q_DISABLE_COPY(QNotifications)
