@@ -41,8 +41,14 @@ bool QPlatformNotificationEngineLinux::sendNotification(const QString &summary, 
 
     QList<QVariant> args;
     QStringList actionList;
+
+    // Add default action to make notification clickable
+    actionList << "default" << "";
+
+    // Add user-defined actions
     for (auto it = actions.constBegin(); it != actions.constEnd(); ++it)
         actionList << it.key() << it.value();
+
     args << QString("qtnotifications")
          << uint(0)
          << icon
@@ -61,7 +67,12 @@ bool QPlatformNotificationEngineLinux::sendNotification(const QString &summary, 
 
 void QPlatformNotificationEngineLinux::onActionInvoked(uint id, const QString &actionKey)
 {
-    emit actionInvoked(id, actionKey);
+    // Check if this is a notification click (default action) vs a specific action button
+    if (actionKey == "default") {
+        emit notificationClicked(id);
+    } else {
+        emit actionInvoked(id, actionKey);
+    }
 }
 
 void QPlatformNotificationEngineLinux::onNotificationClosed(uint id, uint reason)
