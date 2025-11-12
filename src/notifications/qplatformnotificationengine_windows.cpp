@@ -50,6 +50,11 @@ void QPlatformNotificationEngineWindows::handleNotificationClosed(uint notificat
     emit notificationClosed(notificationId, reason);
 }
 
+void QPlatformNotificationEngineWindows::handleNotificationClicked(uint notificationId)
+{
+    emit notificationClicked(notificationId);
+}
+
 bool QPlatformNotificationEngineWindows::isSupported() const
 {
     RTL_OSVERSIONINFOW osvi;
@@ -148,7 +153,13 @@ void QPlatformNotificationEngineWindows::onToastActivated(winrt::Windows::UI::No
     if (activatedArgs) {
         actionKey = QString::fromWCharArray(activatedArgs.Arguments().c_str());
     }
-    handleActionInvoked(m_lastNotificationId, actionKey);
+
+    // If no specific action was invoked (empty arguments), emit notificationClicked
+    if (actionKey.isEmpty() || actionKey == "default") {
+        handleNotificationClicked(m_lastNotificationId);
+    } else {
+        handleActionInvoked(m_lastNotificationId, actionKey);
+    }
 }
 
 void QPlatformNotificationEngineWindows::onToastDismissed(winrt::Windows::UI::Notifications::ToastNotification const& sender, winrt::Windows::UI::Notifications::ToastDismissedEventArgs const& args)

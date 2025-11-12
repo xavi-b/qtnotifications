@@ -84,18 +84,7 @@ private:
 
     void onActionInvoked(uint notificationId, const QString &actionKey)
     {
-        QString actionText;
-        if (actionKey == "open") {
-            actionText = "Opening application...";
-        } else if (actionKey == "dismiss") {
-            actionText = "Dismissing notification...";
-        } else if (actionKey == "reply") {
-            actionText = "Opening reply dialog...";
-        } else {
-            actionText = QString("Unknown action: %1").arg(actionKey);
-        }
-
-        updateStatus(QString("Action invoked for notification %1: %2").arg(notificationId).arg(actionText));
+        updateStatus(QString("Action invoked for notification %1: %2").arg(notificationId).arg(actionKey));
     }
 
     void onNotificationClicked(uint notificationId)
