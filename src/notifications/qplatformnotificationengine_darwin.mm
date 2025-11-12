@@ -118,8 +118,6 @@ bool QPlatformNotificationEngineDarwin::isSupported() const
 
 bool QPlatformNotificationEngineDarwin::sendNotification(const QString &summary, const QString &body, const QString &icon, const QMap<QString, QString> &actions, QNotifications::NotificationType type)
 {
-    Q_UNUSED(type)
-
     UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
 
     // Check authorization status - use a semaphore but only if not on main thread
@@ -150,6 +148,32 @@ bool QPlatformNotificationEngineDarwin::sendNotification(const QString &summary,
     UNMutableNotificationContent *content = [[UNMutableNotificationContent alloc] init];
     content.title = summary.toNSString();
     content.body = body.toNSString();
+
+    // Set notification type/priority using interruption level (macOS 12+ / iOS 15+)
+    // For older macOS versions, this will be ignored gracefully
+    if (@available(macOS 12.0, *)) {
+        UNNotificationInterruptionLevel interruptionLevel;
+        switch (type) {
+            case QNotifications::Error:
+                // Error notifications are time-sensitive and should break through Do Not Disturb
+                interruptionLevel = UNNotificationInterruptionLevelTimeSensitive;
+                break;
+            case QNotifications::Warning:
+                // Warning notifications are active and important
+                interruptionLevel = UNNotificationInterruptionLevelActive;
+                break;
+            case QNotifications::Success:
+                // Success notifications are active
+                interruptionLevel = UNNotificationInterruptionLevelActive;
+                break;
+            case QNotifications::Information:
+            default:
+                // Information notifications are passive (won't break through Do Not Disturb)
+                interruptionLevel = UNNotificationInterruptionLevelPassive;
+                break;
+        }
+        content.interruptionLevel = interruptionLevel;
+    }
 
     // Add icon/image attachment if provided
     if (!icon.isEmpty()) {
