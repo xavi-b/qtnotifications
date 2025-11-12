@@ -77,9 +77,9 @@ private:
         updateStatus(success ? "Notification with actions sent successfully!" : "Failed to send notification with actions");
     }
 
-    void onNotificationClosed()
+    void onNotificationClosed(uint notificationId, QNotifications::ClosedReason closedReason)
     {
-        updateStatus("Notification was closed!");
+        updateStatus(QString("Notification was closed %1: %2").arg(notificationId).arg(QMetaEnum::fromType<QNotifications::ClosedReason>().valueToKey(closedReason)));
     }
 
     void onActionInvoked(uint notificationId, const QString &actionKey)

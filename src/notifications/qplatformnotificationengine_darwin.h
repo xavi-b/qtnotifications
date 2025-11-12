@@ -21,7 +21,7 @@ public:
     ~QPlatformNotificationEngineDarwin();
 
     void handleActionInvoked(uint notificationId, const QString &actionKey);
-    void handleNotificationClosed(uint notificationId, uint reason);
+    void handleNotificationClosed(uint notificationId, QNotifications::ClosedReason reason);
     void handleNotificationClicked(uint notificationId);
 
     bool isSupported() const override;

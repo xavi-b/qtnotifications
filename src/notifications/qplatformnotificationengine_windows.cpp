@@ -40,21 +40,6 @@ QPlatformNotificationEngineWindows::QPlatformNotificationEngineWindows(QObject *
     setAppUserModelID();
 }
 
-void QPlatformNotificationEngineWindows::handleActionInvoked(uint notificationId, const QString &actionKey)
-{
-    emit actionInvoked(notificationId, actionKey);
-}
-
-void QPlatformNotificationEngineWindows::handleNotificationClosed(uint notificationId, uint reason)
-{
-    emit notificationClosed(notificationId, reason);
-}
-
-void QPlatformNotificationEngineWindows::handleNotificationClicked(uint notificationId)
-{
-    emit notificationClicked(notificationId);
-}
-
 bool QPlatformNotificationEngineWindows::isSupported() const
 {
     RTL_OSVERSIONINFOW osvi;
@@ -107,13 +92,13 @@ bool QPlatformNotificationEngineWindows::sendNotification(const QString &summary
         "</visual>"
     ).arg(summary, body);
     if (!actions.isEmpty()) {
-        xml += "<actions>";
+        xml += QStringLiteral("<actions>");
         for (auto it = actions.constBegin(); it != actions.constEnd(); ++it) {
-            xml += QString("<action content=\"%1\" arguments=\"%2\" activationType=\"foreground\"/>").arg(it.value(), it.key());
+            xml += QStringLiteral("<action content=\"%1\" arguments=\"%2\" activationType=\"foreground\"/>").arg(it.value(), it.key());
         }
-        xml += "</actions>";
+        xml += QStringLiteral("</actions>");
     }
-    xml += "</toast>";
+    xml += QStringLiteral("</toast>");
 
     try {
         auto toastXml = winrt::Windows::Data::Xml::Dom::XmlDocument();
@@ -145,6 +130,38 @@ void QPlatformNotificationEngineWindows::ensureComInitialized()
 
 void QPlatformNotificationEngineWindows::setAppUserModelID()
 {
+    // First, check if the registry key exists and create it if needed
+    QString regPath = QStringLiteral("Software\\Classes\\AppUserModelId\\") + m_appUserModelID;
+    std::wstring regPathW = regPath.toStdWString();
+
+    HKEY hKey = nullptr;
+    LONG result = RegOpenKeyExW(HKEY_CURRENT_USER, regPathW.c_str(), 0, KEY_READ, &hKey);
+
+    if (result != ERROR_SUCCESS) {
+        // Key doesn't exist, create it
+        DWORD disposition = 0;
+        result = RegCreateKeyExW(HKEY_CURRENT_USER, regPathW.c_str(), 0, nullptr,
+                                 REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &hKey, &disposition);
+
+        if (result == ERROR_SUCCESS) {
+            QString displayName = qApp ? qApp->applicationName() : m_appUserModelID;
+            std::wstring displayNameW = displayName.toStdWString();
+
+            RegSetValueExW(hKey, L"DisplayName", 0, REG_SZ,
+                          reinterpret_cast<const BYTE*>(displayNameW.c_str()),
+                          static_cast<DWORD>((displayNameW.length() + 1) * sizeof(wchar_t)));
+
+            qDebug() << "Created AppUserModelID registry key:" << m_appUserModelID;
+        } else {
+            qWarning() << "Failed to create AppUserModelID registry key. Error:" << result;
+        }
+    }
+
+    if (hKey) {
+        RegCloseKey(hKey);
+    }
+
+    // Now set the AppUserModelID for the current process
     HRESULT hr = S_OK;
     typedef HRESULT (WINAPI *SetCurrentProcessExplicitAppUserModelID_t)(PCWSTR);
     HMODULE shell32 = LoadLibraryW(L"shell32.dll");
@@ -169,18 +186,19 @@ QPlatformNotificationEngine *qt_create_notification_engine_windows()
 // Add these private methods to the class implementation
 void QPlatformNotificationEngineWindows::onToastActivated(winrt::Windows::UI::Notifications::ToastNotification const& sender, winrt::Windows::Foundation::IInspectable const& args)
 {
-    QString actionKey = "default";
+    QString actionKey = QStringLiteral("default");
     auto activatedArgs = args.try_as<winrt::Windows::UI::Notifications::ToastActivatedEventArgs>();
     if (activatedArgs) {
         actionKey = QString::fromWCharArray(activatedArgs.Arguments().c_str());
     }
 
     // If no specific action was invoked (empty arguments), emit notificationClicked
-    if (actionKey.isEmpty() || actionKey == "default") {
-        handleNotificationClicked(m_lastNotificationId);
+    if (actionKey.isEmpty() || actionKey == QStringLiteral("default")) {
+        emit notificationClicked(m_lastNotificationId);
     } else {
-        handleActionInvoked(m_lastNotificationId, actionKey);
+        emit actionInvoked(m_lastNotificationId, actionKey);
     }
+    emit notificationClosed(m_lastNotificationId, QNotifications::Closed);
 }
 
 void QPlatformNotificationEngineWindows::onToastDismissed(winrt::Windows::UI::Notifications::ToastNotification const& sender, winrt::Windows::UI::Notifications::ToastDismissedEventArgs const& args)
@@ -188,16 +206,16 @@ void QPlatformNotificationEngineWindows::onToastDismissed(winrt::Windows::UI::No
     winrt::Windows::UI::Notifications::ToastDismissalReason reason = args.Reason();
     switch (reason) {
         case winrt::Windows::UI::Notifications::ToastDismissalReason::ApplicationHidden:
-            handleNotificationClosed(m_lastNotificationId, QNotifications::Closed);
+            emit notificationClosed(m_lastNotificationId, QNotifications::Closed);
             break;
         case winrt::Windows::UI::Notifications::ToastDismissalReason::TimedOut:
-            handleNotificationClosed(m_lastNotificationId, QNotifications::Expired);
+            emit notificationClosed(m_lastNotificationId, QNotifications::Expired);
             break;
         case winrt::Windows::UI::Notifications::ToastDismissalReason::UserCanceled:
-            handleNotificationClosed(m_lastNotificationId, QNotifications::Dismissed);
+            emit notificationClosed(m_lastNotificationId, QNotifications::Dismissed);
             break;
         default:
-            handleNotificationClosed(m_lastNotificationId, QNotifications::Undefined);
+            emit notificationClosed(m_lastNotificationId, QNotifications::Undefined);
             break;
     }
 }

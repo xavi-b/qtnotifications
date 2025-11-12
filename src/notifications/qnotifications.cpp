@@ -67,7 +67,7 @@ QT_BEGIN_NAMESPACE
     \value Dismissed
         The user dismissed the notification.
     \value Closed
-        The notification was closed programmatically.
+        The notification was closed programmatically, by action click or content clickof the user.
     \value Undefined
         The reason for the notification being closed is unknown.
 */

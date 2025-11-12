@@ -16,9 +16,11 @@
         ![actionIdentifier isEqualToString:UNNotificationDismissActionIdentifier]) {
         QString actionKey = QString::fromNSString(actionIdentifier);
         self.engine->handleActionInvoked(1, actionKey);
+        self.engine->handleNotificationClosed(1, QNotifications::Closed);
     } else if ([actionIdentifier isEqualToString:UNNotificationDefaultActionIdentifier]) {
         // Handle notification clicked (user tapped on notification body)
         self.engine->handleNotificationClicked(1);
+        self.engine->handleNotificationClosed(1, QNotifications::Closed);
     } else if ([actionIdentifier isEqualToString:UNNotificationDismissActionIdentifier]) {
         // Handle notification dismissed
         self.engine->handleNotificationClosed(1, QNotifications::Dismissed);
@@ -29,7 +31,7 @@
 - (void)userNotificationCenter:(UNUserNotificationCenter *)center
        willPresentNotification:(UNNotification *)notification
          withCompletionHandler:(void (^)(UNNotificationPresentationOptions options))completionHandler {
-    completionHandler(UNNotificationPresentationOptionAlert | UNNotificationPresentationOptionSound);
+    completionHandler(UNNotificationPresentationOptionList | UNNotificationPresentationOptionBanner | UNNotificationPresentationOptionSound);
 }
 @end
 
