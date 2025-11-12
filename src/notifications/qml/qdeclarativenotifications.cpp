@@ -72,6 +72,14 @@ QT_BEGIN_NAMESPACE
 */
 
 /*!
+    \qmlproperty enumeration Notifications::NotificationType
+
+    This property holds the type of notification. It can be one of the following.
+
+    \qmlenumeratorsfrom QNotifications::NotificationType
+*/
+
+/*!
     \qmlsignal Notifications::actionInvoked(uint notificationId, string actionKey)
 
     This signal is emitted when a notification action is invoked by the user.
@@ -84,9 +92,13 @@ QT_BEGIN_NAMESPACE
 */
 
 /*!
-    \qmlsignal Notifications::notificationClosed()
+    \qmlsignal Notifications::notificationClosed(uint notificationId)
 
     This signal is emitted when a notification is closed by the user or the system.
+
+    \a notificationId is the ID of the notification that was closed.
+
+    \sa sendNotification()
 */
 
 /*!
@@ -95,6 +107,8 @@ QT_BEGIN_NAMESPACE
     This signal is emitted when a notification is clicked by the user.
 
     \a notificationId is the ID of the notification that was clicked.
+
+    \sa sendNotification()
 */
 
 QDeclarativeNotifications::QDeclarativeNotifications(QObject *parent)
@@ -124,6 +138,8 @@ bool QDeclarativeNotifications::isSupported() const
     Sends a notification with the given \a title, \a message, and \a type.
 
     Returns \c true if the notification was sent successfully; otherwise returns \c false.
+
+    \sa QNotifications::NotificationType
 */
 bool QDeclarativeNotifications::sendNotification(const QString &title, const QString &message, QNotifications::NotificationType type)
 {
@@ -139,6 +155,8 @@ bool QDeclarativeNotifications::sendNotification(const QString &title, const QSt
     depend on the platform.
 
     Returns \c true if the notification was sent successfully; otherwise returns \c false.
+
+    \sa QNotifications::NotificationType
 */
 bool QDeclarativeNotifications::sendNotification(const QString &title, const QString &message, const QString &iconPath, QNotifications::NotificationType type)
 {
@@ -157,7 +175,7 @@ bool QDeclarativeNotifications::sendNotification(const QString &title, const QSt
 
     When an action is invoked, the \l actionInvoked() signal is emitted.
 
-    \sa actionInvoked()
+    \sa actionInvoked(), QNotifications::NotificationType
 */
 bool QDeclarativeNotifications::sendNotification(const QString &title, const QString &message, const QVariantMap &actions, QNotifications::NotificationType type)
 {
@@ -177,7 +195,7 @@ bool QDeclarativeNotifications::sendNotification(const QString &title, const QSt
 
     Returns \c true if the notification was sent successfully; otherwise returns \c false.
 
-    \sa actionInvoked()
+    \sa actionInvoked(), QNotifications::NotificationType
 */
 bool QDeclarativeNotifications::sendNotification(const QString &title, const QString &message, const QString &iconPath, const QMap<QString, QString> &actions, QNotifications::NotificationType type)
 {

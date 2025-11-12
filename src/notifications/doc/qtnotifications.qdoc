@@ -40,6 +40,8 @@
     \brief QML types for the Qt Notifications API.
 
     The Qt Notifications functionality can be accessed via these QML types.
+
+    \generatelist qmltypesbymodule QtNotifications
 */
 
 /*!

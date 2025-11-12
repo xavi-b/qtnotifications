@@ -68,6 +68,8 @@ QT_BEGIN_NAMESPACE
 */
 
 /*!
+    \fn QNotifications::actionInvoked(uint notificationId, const QString &actionKey)
+
     This signal is emitted when a notification action is invoked by the user.
 
     \a notificationId is the ID of the notification that triggered the action.
@@ -78,13 +80,23 @@ QT_BEGIN_NAMESPACE
 */
 
 /*!
+    \fn QNotifications::notificationClosed(uint notificationId)
+
     This signal is emitted when a notification is closed by the user or the system.
+
+    \a notificationId is the ID of the notification that was closed.
+
+    \sa sendNotification()
 */
 
 /*!
+    \fn QNotifications::notificationClicked(uint notificationId)
+
     This signal is emitted when a notification is clicked by the user.
 
     \a notificationId is the ID of the notification that was clicked.
+
+    \sa sendNotification()
 */
 
 QNotifications::QNotifications(QObject *parent)

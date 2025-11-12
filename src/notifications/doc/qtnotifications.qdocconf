@@ -11,9 +11,13 @@ moduleheader        = QtNotifications
 
 examplesinstallpath = notifications
 exampledirs += \
-                ../../examples
+                ../../../examples
 
-{headerdirs,sourcedirs} += ..
+headerdirs += .. \
+              ../qml
+
+sourcedirs += .. \
+              ../qml
 
 imagedirs  += images
 
