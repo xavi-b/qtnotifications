@@ -118,7 +118,6 @@ bool QPlatformNotificationEngineDarwin::isSupported() const
 
 bool QPlatformNotificationEngineDarwin::sendNotification(const QString &summary, const QString &body, const QString &icon, const QMap<QString, QString> &actions, QNotifications::NotificationType type)
 {
-    Q_UNUSED(icon)
     Q_UNUSED(type)
 
     UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
@@ -151,6 +150,29 @@ bool QPlatformNotificationEngineDarwin::sendNotification(const QString &summary,
     UNMutableNotificationContent *content = [[UNMutableNotificationContent alloc] init];
     content.title = summary.toNSString();
     content.body = body.toNSString();
+
+    // Add icon/image attachment if provided
+    if (!icon.isEmpty()) {
+        NSString *iconPath = icon.toNSString();
+        NSURL *iconURL = [NSURL fileURLWithPath:iconPath];
+
+        // Check if file exists
+        if ([[NSFileManager defaultManager] fileExistsAtPath:iconPath]) {
+            NSError *attachmentError = nil;
+            UNNotificationAttachment *attachment = [UNNotificationAttachment attachmentWithIdentifier:@"notification-icon"
+                                                                                                  URL:iconURL
+                                                                                              options:nil
+                                                                                                error:&attachmentError];
+            if (attachment && !attachmentError) {
+                content.attachments = @[attachment];
+            } else {
+                NSLog(@"QtNotifications: Failed to create notification attachment from icon: %@, error: %@", iconPath, attachmentError.localizedDescription);
+            }
+        } else {
+            NSLog(@"QtNotifications: Icon file not found: %@", iconPath);
+        }
+    }
+
     NSMutableArray *actionArray = [NSMutableArray array];
     for (auto it = actions.constBegin(); it != actions.constEnd(); ++it) {
         NSString *actionKey = it.key().toNSString();
