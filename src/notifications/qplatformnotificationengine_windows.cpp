@@ -80,6 +80,25 @@ bool QPlatformNotificationEngineWindows::sendNotification(const QString &summary
         "<toast>"
         "<visual>"
         "<binding template=\"ToastGeneric\">"
+    );
+
+    // Add icon if provided
+    if (!icon.isEmpty()) {
+        // Support different icon formats and placements
+        // You can use: "appLogoOverride", "hero", "inline"
+        QString placement = QStringLiteral("appLogoOverride");
+
+        // If icon path contains "hero" or "inline", use that placement
+        if (icon.contains(QStringLiteral("hero"), Qt::CaseInsensitive)) {
+            placement = QStringLiteral("hero");
+        } else if (icon.contains(QStringLiteral("inline"), Qt::CaseInsensitive)) {
+            placement = QStringLiteral("inline");
+        }
+
+        xml += QStringLiteral("<image placement=\"%1\" src=\"%2\"/>").arg(placement, icon);
+    }
+
+    xml += QStringLiteral(
         "<text>%1</text>"
         "<text>%2</text>"
         "</binding>"
