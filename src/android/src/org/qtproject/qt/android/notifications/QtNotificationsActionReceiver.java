@@ -9,10 +9,12 @@ public class QtNotificationsActionReceiver extends BroadcastReceiver {
     private static final String TAG = "QtNotificationsActionReceiver";
     public static final String ACTION_NOTIFICATION = "org.qtproject.qt.android.notifications.ACTION_NOTIFICATION";
     public static final String ACTION_NOTIFICATION_CLOSED = "org.qtproject.qt.android.notifications.ACTION_NOTIFICATION_CLOSED";
+    public static final String ACTION_NOTIFICATION_CLICKED = "org.qtproject.qt.android.notifications.ACTION_NOTIFICATION_CLICKED";
 
     // Native callback functions
     native void notifyNotificationClosed(long id);
     native void notifyActionInvoked(long id, String actionKey);
+    native void notifyNotificationClicked(long id);
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -31,6 +33,10 @@ public class QtNotificationsActionReceiver extends BroadcastReceiver {
                 Log.d(TAG, "Action invoked: " + actionKey);
                 notifyActionInvoked(notificationId, actionKey);
             }
+        } else if (ACTION_NOTIFICATION_CLICKED.equals(action)) {
+            // Notification body was clicked
+            Log.d(TAG, "Notification clicked");
+            notifyNotificationClicked(notificationId);
         }
     }
 }
