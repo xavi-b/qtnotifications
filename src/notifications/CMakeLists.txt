@@ -65,3 +65,7 @@ endif()
 if(TARGET Qt::Qml)
     add_subdirectory(qml)
 endif()
+
+qt_internal_add_docs(Notifications
+    doc/qtnotifications.qdocconf
+)

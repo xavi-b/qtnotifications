@@ -2,6 +2,101 @@
 
 QT_BEGIN_NAMESPACE
 
+/*!
+    \qmltype Notifications
+    \inqmlmodule QtNotifications
+    \brief Provides a QML API for sending system notifications.
+
+    The Notifications type allows you to send notifications to the user's desktop
+    notification system from QML. It supports different notification types, custom
+    icons, and action buttons.
+
+    \section1 Basic Usage
+
+    \qml
+    import QtNotifications
+
+    Notifications {
+        id: notifications
+
+        Component.onCompleted: {
+            if (notifications.isSupported()) {
+                notifications.sendNotification(
+                    "Hello",
+                    "This is a test notification",
+                    0  // Information type
+                );
+            }
+        }
+
+        onNotificationClicked: function(notificationId) {
+            console.log("Notification clicked:", notificationId);
+        }
+    }
+    \endqml
+
+    \section1 Notification Types
+
+    The notification type is specified as a QNotifications::NotificationType:
+    \list
+    \li \c QNotifications::Information - Information (default)
+    \li \c QNotifications::Warning - Warning
+    \li \c QNotifications::Error - Error
+    \li \c QNotifications::Success - Success
+    \endlist
+
+    \section1 Actions
+
+    Notifications can include action buttons. Actions are provided as a JavaScript
+    object where keys are action identifiers and values are the display text.
+
+    \qml
+    Notifications {
+        id: notifications
+
+        function sendWithActions() {
+            var actions = {
+                "open": "Open",
+                "dismiss": "Dismiss"
+            };
+            notifications.sendNotification("Title", "Message", actions);
+        }
+
+        onActionInvoked: function(notificationId, actionKey) {
+            console.log("Action invoked:", actionKey);
+        }
+    }
+    \endqml
+
+    \sa QNotifications
+*/
+
+/*!
+    \qmlsignal Notifications::actionInvoked(uint notificationId, string actionKey)
+
+    This signal is emitted when a notification action is invoked by the user.
+
+    \a notificationId is the ID of the notification that triggered the action.
+    \a actionKey is the key of the action that was invoked, as specified in the
+    actions object when sending the notification.
+
+    \sa sendNotification()
+*/
+
+/*!
+    \qmlsignal Notifications::notificationClosed()
+
+    This signal is emitted when a notification is closed by the user or the system.
+*/
+
+/*!
+    \qmlsignal Notifications::notificationClicked(uint notificationId)
+
+    This signal is emitted when a notification is clicked by the user.
+
+    \a notificationId is the ID of the notification that was clicked.
+*/
+
 QDeclarativeNotifications::QDeclarativeNotifications(QObject *parent)
     : QObject(parent)
 {
@@ -10,22 +105,61 @@ QDeclarativeNotifications::QDeclarativeNotifications(QObject *parent)
     connect(&m_notifications, &QNotifications::notificationClicked, this, &QDeclarativeNotifications::notificationClicked);
 }
 
+/*!
+    \qmlmethod bool Notifications::isSupported()
+
+    Returns \c true if notifications are supported on the current platform;
+    otherwise returns \c false.
+
+    \sa sendNotification()
+*/
 bool QDeclarativeNotifications::isSupported() const
 {
     return m_notifications.isSupported();
 }
 
-bool QDeclarativeNotifications::sendNotification(const QString &title, const QString &message, int type)
+/*!
+    \qmlmethod bool Notifications::sendNotification(string title, string message, NotificationType type)
+
+    Sends a notification with the given \a title, \a message, and \a type.
+
+    Returns \c true if the notification was sent successfully; otherwise returns \c false.
+*/
+bool QDeclarativeNotifications::sendNotification(const QString &title, const QString &message, NotificationType type)
 {
     return m_notifications.sendNotification(title, message, static_cast<QNotifications::NotificationType>(type));
 }
 
-bool QDeclarativeNotifications::sendNotification(const QString &title, const QString &message, const QString &iconPath, int type)
+/*!
+    \qmlmethod bool Notifications::sendNotification(string title, string message, string iconPath, NotificationType type)
+
+    Sends a notification with the given \a title, \a message, \a iconPath, and \a type.
+
+    The \a iconPath should be a path to an image file. The format and size requirements
+    depend on the platform.
+
+    Returns \c true if the notification was sent successfully; otherwise returns \c false.
+*/
+bool QDeclarativeNotifications::sendNotification(const QString &title, const QString &message, const QString &iconPath, NotificationType type)
 {
     return m_notifications.sendNotification(title, message, iconPath, static_cast<QNotifications::NotificationType>(type));
 }
 
-bool QDeclarativeNotifications::sendNotification(const QString &title, const QString &message, const QVariantMap &actions, int type)
+/*!
+    \qmlmethod bool Notifications::sendNotification(string title, string message, var actions, NotificationType type)
+
+    Sends a notification with the given \a title, \a message, \a actions, and \a type.
+
+    The \a actions parameter should be a JavaScript object where keys are action
+    identifiers and values are the display text for the action buttons.
+
+    Returns \c true if the notification was sent successfully; otherwise returns \c false.
+
+    When an action is invoked, the \l actionInvoked() signal is emitted.
+
+    \sa actionInvoked()
+*/
+bool QDeclarativeNotifications::sendNotification(const QString &title, const QString &message, const QVariantMap &actions, NotificationType type)
 {
     QMap<QString, QString> stringMap;
     for (auto it = actions.constBegin(); it != actions.constEnd(); ++it) {
@@ -34,7 +168,18 @@ bool QDeclarativeNotifications::sendNotification(const QString &title, const QSt
     return m_notifications.sendNotification(title, message, stringMap, static_cast<QNotifications::NotificationType>(type));
 }
 
-bool QDeclarativeNotifications::sendNotification(const QString &title, const QString &message, const QString &iconPath, const QMap<QString, QString> &actions, int type)
+/*!
+    \qmlmethod bool Notifications::sendNotification(string title, string message, string iconPath, var actions, NotificationType type)
+
+    Sends a notification with the given \a title, \a message, \a iconPath, \a actions, and \a type.
+
+    This is the most complete form of sendNotification(), including all optional features.
+
+    Returns \c true if the notification was sent successfully; otherwise returns \c false.
+
+    \sa actionInvoked()
+*/
+bool QDeclarativeNotifications::sendNotification(const QString &title, const QString &message, const QString &iconPath, const QMap<QString, QString> &actions, NotificationType type)
 {
     return m_notifications.sendNotification(title, message, iconPath, actions, static_cast<QNotifications::NotificationType>(type));
 }
