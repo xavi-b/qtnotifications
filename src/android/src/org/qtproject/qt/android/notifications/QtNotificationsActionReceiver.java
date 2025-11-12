@@ -1,5 +1,6 @@
 package org.qtproject.qt.android.notifications;
 
+import android.app.NotificationManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -27,10 +28,19 @@ public class QtNotificationsActionReceiver extends BroadcastReceiver {
             // Notification was dismissed
             notifyNotificationClosed(notificationId);
         } else if (ACTION_NOTIFICATION.equals(action)) {
-            // Action button was clicked
+            // Action button was clicked - dismiss the notification
             String actionKey = intent.getStringExtra("action_key");
             if (actionKey != null) {
                 Log.d(TAG, "Action invoked: " + actionKey);
+
+                // Cancel the notification when an action is clicked
+                NotificationManager notificationManager = (NotificationManager)
+                    context.getSystemService(Context.NOTIFICATION_SERVICE);
+                if (notificationManager != null) {
+                    notificationManager.cancel(notificationId);
+                    Log.d(TAG, "Notification " + notificationId + " cancelled after action click");
+                }
+
                 notifyActionInvoked(notificationId, actionKey);
             }
         } else if (ACTION_NOTIFICATION_CLICKED.equals(action)) {

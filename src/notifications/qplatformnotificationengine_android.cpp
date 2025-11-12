@@ -94,7 +94,10 @@ Java_org_qtproject_qt_android_notifications_QtNotificationsActionReceiver_notify
     // Emit signal on main thread
     QMetaObject::invokeMethod(
         QCoreApplication::instance(),
-        [id]() { emit qt_create_notification_engine_android()->notificationClosed(id, QNotifications::Dismissed); },
+        [id]() {
+            emit qt_create_notification_engine_android()
+                ->notificationClosed(id, QNotifications::Dismissed);
+        },
         Qt::QueuedConnection);
 }
 
@@ -114,7 +117,9 @@ Java_org_qtproject_qt_android_notifications_QtNotificationsActionReceiver_notify
         QCoreApplication::instance(),
         [id, key]() {
             emit qt_create_notification_engine_android()
-                ->actionInvoked(id, key); // notificationId is not used in current implementation
+                ->actionInvoked(id, key);
+            emit qt_create_notification_engine_android()
+                ->notificationClosed(id, QNotifications::Closed);
         },
         Qt::QueuedConnection);
 }
@@ -130,7 +135,12 @@ Java_org_qtproject_qt_android_notifications_QtNotificationsActionReceiver_notify
     // Emit signal on main thread
     QMetaObject::invokeMethod(
         QCoreApplication::instance(),
-        [id]() { emit qt_create_notification_engine_android()->notificationClicked(id); },
+        [id]() {
+            emit qt_create_notification_engine_android()
+                ->notificationClicked(id);
+            emit qt_create_notification_engine_android()
+                ->notificationClosed(id, QNotifications::Closed);
+        },
         Qt::QueuedConnection);
 }
 

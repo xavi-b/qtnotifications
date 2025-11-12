@@ -53,6 +53,12 @@ if(APPLE)
     )
 endif()
 
+if(ANDROID)
+    set_target_properties(notifications_example_qml PROPERTIES
+        QT_ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android"
+    )
+endif()
+
 qt_finalize_target(notifications_example_qml)
 
 install(TARGETS notifications_example_qml

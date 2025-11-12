@@ -55,9 +55,10 @@ class QtNotifications
 
         try {
             // Create dismiss intent
-            Intent dismissIntent = new Intent(mContext, QtNotificationsActionReceiver.class);
-            dismissIntent.setAction(QtNotificationsActionReceiver.ACTION_NOTIFICATION_CLOSED);
+            Intent dismissIntent = new Intent(QtNotificationsActionReceiver.ACTION_NOTIFICATION_CLOSED);
+            dismissIntent.setClass(mContext, QtNotificationsActionReceiver.class);
             dismissIntent.putExtra("notification_id", mNotificationId);
+            dismissIntent.setPackage(mContext.getPackageName());
             PendingIntent dismissPendingIntent = PendingIntent.getBroadcast(
                 mContext,
                 mNotificationId,
@@ -66,9 +67,10 @@ class QtNotifications
             );
 
             // Create content intent for notification click
-            Intent contentIntent = new Intent(mContext, QtNotificationsActionReceiver.class);
-            contentIntent.setAction(QtNotificationsActionReceiver.ACTION_NOTIFICATION_CLICKED);
+            Intent contentIntent = new Intent(QtNotificationsActionReceiver.ACTION_NOTIFICATION_CLICKED);
+            contentIntent.setClass(mContext, QtNotificationsActionReceiver.class);
             contentIntent.putExtra("notification_id", mNotificationId);
+            contentIntent.setPackage(mContext.getPackageName());
             PendingIntent contentPendingIntent = PendingIntent.getBroadcast(
                 mContext,
                 mNotificationId + 10000, // Use different request code to avoid conflicts
@@ -85,22 +87,15 @@ class QtNotifications
                 .setDeleteIntent(dismissPendingIntent)
                 .setContentIntent(contentPendingIntent);
 
-            // Set notification type icon if available
-            if (type > 0) {
-                int iconResource = getNotificationIcon(type);
-                if (iconResource != 0) {
-                    builder.setSmallIcon(iconResource);
-                }
-            }
-
             // Add actions if provided
             if (actions != null && !actions.isEmpty()) {
                 int actionIndex = 0;
                 for (Map.Entry<String, String> entry : actions.entrySet()) {
-                    Intent actionIntent = new Intent(mContext, QtNotificationsActionReceiver.class);
-                    actionIntent.setAction(QtNotificationsActionReceiver.ACTION_NOTIFICATION);
+                    Intent actionIntent = new Intent(QtNotificationsActionReceiver.ACTION_NOTIFICATION);
+                    actionIntent.setClass(mContext, QtNotificationsActionReceiver.class);
                     actionIntent.putExtra("notification_id", mNotificationId);
                     actionIntent.putExtra("action_key", entry.getKey());
+                    actionIntent.setPackage(mContext.getPackageName());
 
                     PendingIntent actionPendingIntent = PendingIntent.getBroadcast(
                         mContext,
@@ -124,21 +119,6 @@ class QtNotifications
         } catch (Exception e) {
             Log.e(TAG, "Error sending notification: " + e.getMessage());
             return false;
-        }
-    }
-
-    private int getNotificationIcon(int type) {
-        switch (type) {
-            case 1: // Info
-                return android.R.drawable.ic_dialog_info;
-            case 2: // Warning
-                return android.R.drawable.ic_dialog_alert;
-            case 3: // Success
-                return android.R.drawable.ic_dialog_info;
-            case 4: // Error
-                return android.R.drawable.ic_dialog_alert;
-            default:
-                return android.R.drawable.ic_dialog_info;
         }
     }
 
