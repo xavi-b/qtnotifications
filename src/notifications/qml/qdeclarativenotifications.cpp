@@ -7,6 +7,7 @@ QDeclarativeNotifications::QDeclarativeNotifications(QObject *parent)
 {
     connect(&m_notifications, &QNotifications::actionInvoked, this, &QDeclarativeNotifications::actionInvoked);
     connect(&m_notifications, &QNotifications::notificationClosed, this, &QDeclarativeNotifications::notificationClosed);
+    connect(&m_notifications, &QNotifications::notificationClicked, this, &QDeclarativeNotifications::notificationClicked);
 }
 
 bool QDeclarativeNotifications::isSupported() const

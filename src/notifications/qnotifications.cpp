@@ -10,6 +10,7 @@ QNotifications::QNotifications(QObject *parent)
     if (m_engine) {
         connect(m_engine, &QPlatformNotificationEngine::actionInvoked, this, &QNotifications::actionInvoked);
         connect(m_engine, &::QPlatformNotificationEngine::notificationClosed, this, &QNotifications::notificationClosed);
+        connect(m_engine, &QPlatformNotificationEngine::notificationClicked, this, &QNotifications::notificationClicked);
     }
 }
 

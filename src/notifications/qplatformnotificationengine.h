@@ -24,6 +24,7 @@ public:
 signals:
     void actionInvoked(uint notificationId, const QString &actionKey);
     void notificationClosed(uint notificationId, uint reason);
+    void notificationClicked(uint notificationId);
 };
 
 QPlatformNotificationEngine *qt_notification_engine();
