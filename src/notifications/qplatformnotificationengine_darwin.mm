@@ -16,15 +16,12 @@
         ![actionIdentifier isEqualToString:UNNotificationDismissActionIdentifier]) {
         QString actionKey = QString::fromNSString(actionIdentifier);
         self.engine->handleActionInvoked(1, actionKey);
-    } else {
-        // Handle notification closed (dismissed or default action)
-        uint reason = 0;
-        if ([actionIdentifier isEqualToString:UNNotificationDismissActionIdentifier]) {
-            reason = 1; // 1 = dismissed
-        } else if ([actionIdentifier isEqualToString:UNNotificationDefaultActionIdentifier]) {
-            reason = 2; // 2 = default action (clicked)
-        }
-        self.engine->handleNotificationClosed(1, reason);
+    } else if ([actionIdentifier isEqualToString:UNNotificationDefaultActionIdentifier]) {
+        // Handle notification clicked (user tapped on notification body)
+        self.engine->handleNotificationClicked(1);
+    } else if ([actionIdentifier isEqualToString:UNNotificationDismissActionIdentifier]) {
+        // Handle notification dismissed
+        self.engine->handleNotificationClosed(1, 1); // reason 1 = dismissed
     }
     completionHandler();
 }
@@ -75,6 +72,11 @@ void QPlatformNotificationEngineDarwin::handleActionInvoked(uint notificationId,
 void QPlatformNotificationEngineDarwin::handleNotificationClosed(uint notificationId, uint reason)
 {
     emit notificationClosed(notificationId, reason);
+}
+
+void QPlatformNotificationEngineDarwin::handleNotificationClicked(uint notificationId)
+{
+    emit notificationClicked(notificationId);
 }
 
 bool QPlatformNotificationEngineDarwin::isSupported() const
