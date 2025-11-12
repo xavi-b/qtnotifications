@@ -19,24 +19,24 @@ public:
     Q_INVOKABLE bool isSupported() const;
     Q_INVOKABLE bool sendNotification(const QString &title,
                                       const QString &message,
-                                      int type = 0);
+                                      QNotifications::NotificationType type = QNotifications::Information);
     Q_INVOKABLE bool sendNotification(const QString &title,
                                       const QString &message,
                                       const QString &iconPath,
-                                      int type = 0);
+                                      QNotifications::NotificationType type = QNotifications::Information);
     Q_INVOKABLE bool sendNotification(const QString &title,
                                       const QString &message,
                                       const QVariantMap &actions,
-                                      int type = 0);
+                                      QNotifications::NotificationType type = QNotifications::Information);
     Q_INVOKABLE bool sendNotification(const QString &title,
                                       const QString &message,
                                       const QString &iconPath,
                                       const QMap<QString, QString> &actions,
-                                      int type = 0);
+                                      QNotifications::NotificationType type = QNotifications::Information);
 
 signals:
     void actionInvoked(uint notificationId, const QString &actionKey);
-    void notificationClosed();
+    void notificationClosed(uint notificationId);
     void notificationClicked(uint notificationId);
 
 private:

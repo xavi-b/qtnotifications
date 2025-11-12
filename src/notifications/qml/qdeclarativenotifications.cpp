@@ -125,7 +125,7 @@ bool QDeclarativeNotifications::isSupported() const
 
     Returns \c true if the notification was sent successfully; otherwise returns \c false.
 */
-bool QDeclarativeNotifications::sendNotification(const QString &title, const QString &message, NotificationType type)
+bool QDeclarativeNotifications::sendNotification(const QString &title, const QString &message, QNotifications::NotificationType type)
 {
     return m_notifications.sendNotification(title, message, static_cast<QNotifications::NotificationType>(type));
 }
@@ -140,7 +140,7 @@ bool QDeclarativeNotifications::sendNotification(const QString &title, const QSt
 
     Returns \c true if the notification was sent successfully; otherwise returns \c false.
 */
-bool QDeclarativeNotifications::sendNotification(const QString &title, const QString &message, const QString &iconPath, NotificationType type)
+bool QDeclarativeNotifications::sendNotification(const QString &title, const QString &message, const QString &iconPath, QNotifications::NotificationType type)
 {
     return m_notifications.sendNotification(title, message, iconPath, static_cast<QNotifications::NotificationType>(type));
 }
@@ -159,7 +159,7 @@ bool QDeclarativeNotifications::sendNotification(const QString &title, const QSt
 
     \sa actionInvoked()
 */
-bool QDeclarativeNotifications::sendNotification(const QString &title, const QString &message, const QVariantMap &actions, NotificationType type)
+bool QDeclarativeNotifications::sendNotification(const QString &title, const QString &message, const QVariantMap &actions, QNotifications::NotificationType type)
 {
     QMap<QString, QString> stringMap;
     for (auto it = actions.constBegin(); it != actions.constEnd(); ++it) {
@@ -179,7 +179,7 @@ bool QDeclarativeNotifications::sendNotification(const QString &title, const QSt
 
     \sa actionInvoked()
 */
-bool QDeclarativeNotifications::sendNotification(const QString &title, const QString &message, const QString &iconPath, const QMap<QString, QString> &actions, NotificationType type)
+bool QDeclarativeNotifications::sendNotification(const QString &title, const QString &message, const QString &iconPath, const QMap<QString, QString> &actions, QNotifications::NotificationType type)
 {
     return m_notifications.sendNotification(title, message, iconPath, actions, static_cast<QNotifications::NotificationType>(type));
 }

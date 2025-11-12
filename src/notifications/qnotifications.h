@@ -8,7 +8,6 @@
 
 QT_BEGIN_NAMESPACE
 
-
 class Q_NOTIFICATIONS_EXPORT QNotifications : public QObject
 {
     Q_OBJECT
@@ -47,7 +46,7 @@ public:
 
 Q_SIGNALS:
     void actionInvoked(uint notificationId, const QString &actionKey);
-    void notificationClosed();
+    void notificationClosed(uint notificationId);
     void notificationClicked(uint notificationId);
 
 private:
