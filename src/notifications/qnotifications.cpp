@@ -24,16 +24,6 @@ QT_BEGIN_NAMESPACE
     }
     \endcode
 
-    \section1 Notification Types
-
-    The NotificationType enum defines the type of notification:
-    \list
-    \li \c Information - General informational notification
-    \li \c Warning - Warning notification
-    \li \c Error - Error notification
-    \li \c Success - Success notification
-    \endlist
-
     \section1 Actions
 
     Notifications can include action buttons that the user can interact with.
@@ -68,6 +58,21 @@ QT_BEGIN_NAMESPACE
 */
 
 /*!
+    \enum QNotifications::ClosedReason
+
+    This enum describes the type of notification.
+
+    \value Expired
+        The notification timed out and was closed automatically by the server.
+    \value Dismissed
+        The user dismissed the notification.
+    \value Closed
+        The notification was closed programmatically.
+    \value Undefined
+        The reason for the notification being closed is unknown.
+*/
+
+/*!
     \fn QNotifications::actionInvoked(uint notificationId, const QString &actionKey)
 
     This signal is emitted when a notification action is invoked by the user.
@@ -80,11 +85,12 @@ QT_BEGIN_NAMESPACE
 */
 
 /*!
-    \fn QNotifications::notificationClosed(uint notificationId)
+    \fn QNotifications::notificationClosed(uint notificationId, ClosedReason reason)
 
     This signal is emitted when a notification is closed by the user or the system.
 
     \a notificationId is the ID of the notification that was closed.
+    \a reason is the reason for the notification being closed.
 
     \sa sendNotification()
 */
@@ -193,7 +199,7 @@ bool QNotifications::sendNotification(const QString &title,
 {
     if (!m_engine)
         return false;
-    return m_engine->sendNotification(title, message, iconPath, actions, static_cast<int>(type));
+    return m_engine->sendNotification(title, message, iconPath, actions, type);
 }
 
 QT_END_NAMESPACE

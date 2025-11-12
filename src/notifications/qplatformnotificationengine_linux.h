@@ -20,7 +20,7 @@ public:
                          const QString &message,
                          const QString &iconPath,
                          const QMap<QString, QString> &actions,
-                         int type) override;
+                         QNotifications::NotificationType type) override;
 
 private Q_SLOTS:
     void onActionInvoked(uint id, const QString &actionKey);

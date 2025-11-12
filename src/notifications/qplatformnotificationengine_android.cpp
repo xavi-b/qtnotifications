@@ -47,7 +47,7 @@ bool QPlatformNotificationEngineAndroid::sendNotification(const QString &summary
                                                           const QString &body,
                                                           const QString &icon,
                                                           const QMap<QString, QString> &actions,
-                                                          int type)
+                                                          QNotifications::NotificationType type)
 {
     if (!m_javaObject.isValid()) {
         qWarning("QtNotifications Android: Java object not initialized");
@@ -75,7 +75,7 @@ bool QPlatformNotificationEngineAndroid::sendNotification(const QString &summary
         QJniObject::fromString(body).object<jstring>(),
         QJniObject::fromString(icon).object<jstring>(),
         javaActions.object<jobject>(),
-        static_cast<jint>(type));
+        static_cast<jint>(type)); // TODO: convert to Java int
 
     return result;
 }
@@ -90,12 +90,11 @@ Java_org_qtproject_qt_android_notifications_QtNotificationsActionReceiver_notify
 {
     Q_UNUSED(env)
     Q_UNUSED(thiz)
-    Q_UNUSED(id)
 
     // Emit signal on main thread
     QMetaObject::invokeMethod(
         QCoreApplication::instance(),
-        [id]() { emit qt_create_notification_engine_android()->notificationClosed(id, 0); },
+        [id]() { emit qt_create_notification_engine_android()->notificationClosed(id, ClosedReason::Dismissed); },
         Qt::QueuedConnection);
 }
 
@@ -107,7 +106,6 @@ Java_org_qtproject_qt_android_notifications_QtNotificationsActionReceiver_notify
 {
     Q_UNUSED(env)
     Q_UNUSED(thiz)
-    Q_UNUSED(id)
 
     QString key = QJniObject(actionKey).toString();
 

@@ -71,8 +71,10 @@ bool QPlatformNotificationEngineWindows::isSupported() const
     return osvi.dwMajorVersion >= 10;
 }
 
-bool QPlatformNotificationEngineWindows::sendNotification(const QString &summary, const QString &body, const QString &icon, const QMap<QString, QString> &actions, int type)
+bool QPlatformNotificationEngineWindows::sendNotification(const QString &summary, const QString &body, const QString &icon, const QMap<QString, QString> &actions, QNotifications::NotificationType type)
 {
+    Q_UNUSED(type);
+
     ensureComInitialized();
     static uint s_notificationId = 1;
     uint notificationId = s_notificationId++;
@@ -183,7 +185,21 @@ void QPlatformNotificationEngineWindows::onToastActivated(winrt::Windows::UI::No
 
 void QPlatformNotificationEngineWindows::onToastDismissed(winrt::Windows::UI::Notifications::ToastNotification const& sender, winrt::Windows::UI::Notifications::ToastDismissedEventArgs const& args)
 {
-    handleNotificationClosed(m_lastNotificationId, 0);
+    winrt::Windows::UI::Notifications::ToastDismissalReason reason = args.Reason();
+    switch (reason) {
+        case winrt::Windows::UI::Notifications::ToastDismissalReason::ApplicationHidden:
+            handleNotificationClosed(m_lastNotificationId, QNotifications::Closed);
+            break;
+        case winrt::Windows::UI::Notifications::ToastDismissalReason::TimedOut:
+            handleNotificationClosed(m_lastNotificationId, QNotifications::Expired);
+            break;
+        case winrt::Windows::UI::Notifications::ToastDismissalReason::UserCanceled:
+            handleNotificationClosed(m_lastNotificationId, QNotifications::Dismissed);
+            break;
+        default:
+            handleNotificationClosed(m_lastNotificationId, QNotifications::Undefined);
+            break;
+    }
 }
 
 QT_END_NAMESPACE

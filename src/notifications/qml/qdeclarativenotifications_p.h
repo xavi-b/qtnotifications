@@ -36,7 +36,7 @@ public:
 
 signals:
     void actionInvoked(uint notificationId, const QString &actionKey);
-    void notificationClosed(uint notificationId);
+    void notificationClosed(uint notificationId, QNotifications::ClosedReason reason);
     void notificationClicked(uint notificationId);
 
 private:

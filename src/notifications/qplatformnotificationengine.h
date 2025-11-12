@@ -1,6 +1,7 @@
 #ifndef QPLATFORMNOTIFICATIONENGINE_H
 #define QPLATFORMNOTIFICATIONENGINE_H
 
+#include <QtNotifications/qnotifications.h>
 #include <QtCore/QObject>
 #include <QtCore/QString>
 #include <QtCore/QMap>
@@ -19,11 +20,11 @@ public:
                                  const QString &message,
                                  const QString &iconPath,
                                  const QMap<QString, QString> &actions,
-                                 int type) = 0;
+                                 QNotifications::NotificationType type) = 0;
 
 signals:
     void actionInvoked(uint notificationId, const QString &actionKey);
-    void notificationClosed(uint notificationId, uint reason);
+    void notificationClosed(uint notificationId, QNotifications::ClosedReason reason);
     void notificationClicked(uint notificationId);
 };
 

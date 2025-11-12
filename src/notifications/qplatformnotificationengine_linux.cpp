@@ -7,18 +7,18 @@ QPlatformNotificationEngineLinux::QPlatformNotificationEngineLinux(QObject *pare
 : QPlatformNotificationEngine(parent)
 {
     QDBusConnection::sessionBus().connect(
-        "org.freedesktop.Notifications",
-        "/org/freedesktop/Notifications",
-        "org.freedesktop.Notifications",
-        "ActionInvoked",
+        QStringLiteral("org.freedesktop.Notifications"),
+        QStringLiteral("/org/freedesktop/Notifications"),
+        QStringLiteral("org.freedesktop.Notifications"),
+        QStringLiteral("ActionInvoked"),
         this,
         SLOT(onActionInvoked(uint, QString))
     );
     QDBusConnection::sessionBus().connect(
-        "org.freedesktop.Notifications",
-        "/org/freedesktop/Notifications",
-        "org.freedesktop.Notifications",
-        "NotificationClosed",
+        QStringLiteral("org.freedesktop.Notifications"),
+        QStringLiteral("/org/freedesktop/Notifications"),
+        QStringLiteral("org.freedesktop.Notifications"),
+        QStringLiteral("NotificationClosed"),
         this,
         SLOT(onNotificationClosed(uint, uint))
     );
@@ -29,33 +29,41 @@ bool QPlatformNotificationEngineLinux::isSupported() const
     return QDBusConnection::sessionBus().isConnected();
 }
 
-bool QPlatformNotificationEngineLinux::sendNotification(const QString &summary, const QString &body, const QString &icon, const QMap<QString, QString> &actions, int type)
+bool QPlatformNotificationEngineLinux::sendNotification(const QString &summary, const QString &body, const QString &icon, const QMap<QString, QString> &actions, QNotifications::NotificationType type)
 {
-    Q_UNUSED(type);
-
     QDBusMessage msg = QDBusMessage::createMethodCall(
-        "org.freedesktop.Notifications",
-        "/org/freedesktop/Notifications",
-        "org.freedesktop.Notifications",
-        "Notify");
+        QStringLiteral("org.freedesktop.Notifications"),
+        QStringLiteral("/org/freedesktop/Notifications"),
+        QStringLiteral("org.freedesktop.Notifications"),
+        QStringLiteral("Notify"));
 
     QList<QVariant> args;
     QStringList actionList;
 
     // Add default action to make notification clickable
-    actionList << "default" << "";
+    actionList << QStringLiteral("default") << QStringLiteral("");
 
     // Add user-defined actions
     for (auto it = actions.constBegin(); it != actions.constEnd(); ++it)
         actionList << it.key() << it.value();
 
-    args << QString("qtnotifications")
+    int urgency = 0;
+
+    if (type == QNotifications::Warning || type == QNotifications::Error)
+        urgency = 2;
+    else if (type == QNotifications::Success)
+        urgency = 1;
+
+    QVariantMap map;
+    map.insert(QStringLiteral("urgency"), urgency);
+
+    args << QStringLiteral("qtnotifications")
          << uint(0)
          << icon
          << summary
          << body
          << QVariant::fromValue(actionList)
-         << QVariantMap()
+         << map
          << int(5000);
 
     msg.setArguments(args);
@@ -68,7 +76,7 @@ bool QPlatformNotificationEngineLinux::sendNotification(const QString &summary, 
 void QPlatformNotificationEngineLinux::onActionInvoked(uint id, const QString &actionKey)
 {
     // Check if this is a notification click (default action) vs a specific action button
-    if (actionKey == "default") {
+    if (actionKey == QStringLiteral("default")) {
         emit notificationClicked(id);
     } else {
         emit actionInvoked(id, actionKey);
@@ -77,7 +85,22 @@ void QPlatformNotificationEngineLinux::onActionInvoked(uint id, const QString &a
 
 void QPlatformNotificationEngineLinux::onNotificationClosed(uint id, uint reason)
 {
-    emit notificationClosed(id, reason);
+    QNotifications::ClosedReason closedReason;
+    switch (reason) {
+        case 1:
+            closedReason = QNotifications::Expired;
+            break;
+        case 2:
+            closedReason = QNotifications::Dismissed;
+            break;
+        case 3:
+            closedReason = QNotifications::Closed;
+            break;
+        default:
+            closedReason = QNotifications::Undefined;
+            break;
+    }
+    emit notificationClosed(id, closedReason);
 }
 
 QPlatformNotificationEngine *qt_create_notification_engine_linux()

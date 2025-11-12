@@ -21,7 +21,7 @@
         self.engine->handleNotificationClicked(1);
     } else if ([actionIdentifier isEqualToString:UNNotificationDismissActionIdentifier]) {
         // Handle notification dismissed
-        self.engine->handleNotificationClosed(1, 1); // reason 1 = dismissed
+        self.engine->handleNotificationClosed(1, QNotifications::Dismissed);
     }
     completionHandler();
 }
@@ -69,7 +69,7 @@ void QPlatformNotificationEngineDarwin::handleActionInvoked(uint notificationId,
     emit actionInvoked(notificationId, actionKey);
 }
 
-void QPlatformNotificationEngineDarwin::handleNotificationClosed(uint notificationId, uint reason)
+void QPlatformNotificationEngineDarwin::handleNotificationClosed(uint notificationId, QNotifications::ClosedReason reason)
 {
     emit notificationClosed(notificationId, reason);
 }
@@ -84,7 +84,7 @@ bool QPlatformNotificationEngineDarwin::isSupported() const
     return true;
 }
 
-bool QPlatformNotificationEngineDarwin::sendNotification(const QString &summary, const QString &body, const QString &icon, const QMap<QString, QString> &actions, int type)
+bool QPlatformNotificationEngineDarwin::sendNotification(const QString &summary, const QString &body, const QString &icon, const QMap<QString, QString> &actions, QNotifications::NotificationType type)
 {
     Q_UNUSED(icon)
     Q_UNUSED(type)

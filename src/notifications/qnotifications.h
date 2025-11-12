@@ -2,11 +2,12 @@
 #define QNOTIFICATIONS_H
 
 #include <QtNotifications/qnotifications_global.h>
-#include <QtNotifications/qplatformnotificationengine.h>
 #include <QtCore/qobject.h>
 #include <QtCore/qstring.h>
 
 QT_BEGIN_NAMESPACE
+
+class QPlatformNotificationEngine;
 
 class Q_NOTIFICATIONS_EXPORT QNotifications : public QObject
 {
@@ -23,6 +24,14 @@ public:
         Success
     };
     Q_ENUM(NotificationType)
+
+    enum ClosedReason {
+        Expired,
+        Dismissed,
+        Closed,
+        Undefined
+    };
+    Q_ENUM(ClosedReason)
 
     bool isSupported() const;
 
@@ -46,7 +55,7 @@ public:
 
 Q_SIGNALS:
     void actionInvoked(uint notificationId, const QString &actionKey);
-    void notificationClosed(uint notificationId);
+    void notificationClosed(uint notificationId, ClosedReason reason);
     void notificationClicked(uint notificationId);
 
 private:

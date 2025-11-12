@@ -80,6 +80,14 @@ QT_BEGIN_NAMESPACE
 */
 
 /*!
+    \qmlproperty enumeration Notifications::ClosedReason
+
+    This property holds the reason for the notification being closed. It can be one of the following.
+
+    \qmlenumeratorsfrom QNotifications::ClosedReason
+*/
+
+/*!
     \qmlsignal Notifications::actionInvoked(uint notificationId, string actionKey)
 
     This signal is emitted when a notification action is invoked by the user.
@@ -92,11 +100,12 @@ QT_BEGIN_NAMESPACE
 */
 
 /*!
-    \qmlsignal Notifications::notificationClosed(uint notificationId)
+    \qmlsignal Notifications::notificationClosed(uint notificationId, QNotifications::ClosedReason reason)
 
     This signal is emitted when a notification is closed by the user or the system.
 
     \a notificationId is the ID of the notification that was closed.
+    \a reason is the reason for the notification being closed.
 
     \sa sendNotification()
 */
