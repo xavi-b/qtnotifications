@@ -94,7 +94,7 @@ Java_org_qtproject_qt_android_notifications_QtNotificationsActionReceiver_notify
     // Emit signal on main thread
     QMetaObject::invokeMethod(
         QCoreApplication::instance(),
-        [id]() { emit qt_create_notification_engine_android()->notificationClosed(id, ClosedReason::Dismissed); },
+        [id]() { emit qt_create_notification_engine_android()->notificationClosed(id, QNotifications::Dismissed); },
         Qt::QueuedConnection);
 }
 
