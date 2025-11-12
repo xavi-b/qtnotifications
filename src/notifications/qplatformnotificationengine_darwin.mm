@@ -12,18 +12,21 @@
        didReceiveNotificationResponse:(UNNotificationResponse *)response
                 withCompletionHandler:(void (^)(void))completionHandler {
     NSString *actionIdentifier = response.actionIdentifier;
+    NSString *notificationIdentifier = response.notification.request.identifier;
+    QString notificationIdString = QString::fromNSString(notificationIdentifier);
+
     if (![actionIdentifier isEqualToString:UNNotificationDefaultActionIdentifier] &&
         ![actionIdentifier isEqualToString:UNNotificationDismissActionIdentifier]) {
         QString actionKey = QString::fromNSString(actionIdentifier);
-        self.engine->handleActionInvoked(1, actionKey);
-        self.engine->handleNotificationClosed(1, QNotifications::Closed);
+        self.engine->handleActionInvoked(notificationIdString, actionKey);
+        self.engine->handleNotificationClosed(notificationIdString, QNotifications::Closed);
     } else if ([actionIdentifier isEqualToString:UNNotificationDefaultActionIdentifier]) {
         // Handle notification clicked (user tapped on notification body)
-        self.engine->handleNotificationClicked(1);
-        self.engine->handleNotificationClosed(1, QNotifications::Closed);
+        self.engine->handleNotificationClicked(notificationIdString);
+        self.engine->handleNotificationClosed(notificationIdString, QNotifications::Closed);
     } else if ([actionIdentifier isEqualToString:UNNotificationDismissActionIdentifier]) {
         // Handle notification dismissed
-        self.engine->handleNotificationClosed(1, QNotifications::Dismissed);
+        self.engine->handleNotificationClosed(notificationIdString, QNotifications::Dismissed);
     }
     completionHandler();
 }
@@ -96,18 +99,25 @@ QPlatformNotificationEngineDarwin::~QPlatformNotificationEngineDarwin()
     }
 }
 
-void QPlatformNotificationEngineDarwin::handleActionInvoked(uint notificationId, const QString &actionKey)
+void QPlatformNotificationEngineDarwin::handleActionInvoked(const QString &notificationIdentifier, const QString &actionKey)
 {
+    uint notificationId = m_notificationIdMap.value(notificationIdentifier, 0);
     emit actionInvoked(notificationId, actionKey);
+    // Remove from map after handling
+    m_notificationIdMap.remove(notificationIdentifier);
 }
 
-void QPlatformNotificationEngineDarwin::handleNotificationClosed(uint notificationId, QNotifications::ClosedReason reason)
+void QPlatformNotificationEngineDarwin::handleNotificationClosed(const QString &notificationIdentifier, QNotifications::ClosedReason reason)
 {
+    uint notificationId = m_notificationIdMap.value(notificationIdentifier, 0);
     emit notificationClosed(notificationId, reason);
+    // Remove from map after handling
+    m_notificationIdMap.remove(notificationIdentifier);
 }
 
-void QPlatformNotificationEngineDarwin::handleNotificationClicked(uint notificationId)
+void QPlatformNotificationEngineDarwin::handleNotificationClicked(const QString &notificationIdentifier)
 {
+    uint notificationId = m_notificationIdMap.value(notificationIdentifier, 0);
     emit notificationClicked(notificationId);
 }
 
@@ -116,8 +126,10 @@ bool QPlatformNotificationEngineDarwin::isSupported() const
     return true;
 }
 
-bool QPlatformNotificationEngineDarwin::sendNotification(const QString &summary, const QString &body, const QString &icon, const QMap<QString, QString> &actions, QNotifications::NotificationType type)
+uint QPlatformNotificationEngineDarwin::sendNotification(const QString &title, const QString &message, const QVariantMap &parameters, const QMap<QString, QString> &actions)
 {
+    QString icon = parameters.value(QStringLiteral("icon")).toString();
+
     UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
 
     // Check authorization status - use a semaphore but only if not on main thread
@@ -146,34 +158,8 @@ bool QPlatformNotificationEngineDarwin::sendNotification(const QString &summary,
     }
 
     UNMutableNotificationContent *content = [[UNMutableNotificationContent alloc] init];
-    content.title = summary.toNSString();
-    content.body = body.toNSString();
-
-    // Set notification type/priority using interruption level (macOS 12+ / iOS 15+)
-    // For older macOS versions, this will be ignored gracefully
-    if (@available(macOS 12.0, *)) {
-        UNNotificationInterruptionLevel interruptionLevel;
-        switch (type) {
-            case QNotifications::Error:
-                // Error notifications are time-sensitive and should break through Do Not Disturb
-                interruptionLevel = UNNotificationInterruptionLevelTimeSensitive;
-                break;
-            case QNotifications::Warning:
-                // Warning notifications are active and important
-                interruptionLevel = UNNotificationInterruptionLevelActive;
-                break;
-            case QNotifications::Success:
-                // Success notifications are active
-                interruptionLevel = UNNotificationInterruptionLevelActive;
-                break;
-            case QNotifications::Information:
-            default:
-                // Information notifications are passive (won't break through Do Not Disturb)
-                interruptionLevel = UNNotificationInterruptionLevelPassive;
-                break;
-        }
-        content.interruptionLevel = interruptionLevel;
-    }
+    content.title = title.toNSString();
+    content.body = message.toNSString();
 
     // Add icon/image attachment if provided
     if (!icon.isEmpty()) {
@@ -211,13 +197,25 @@ bool QPlatformNotificationEngineDarwin::sendNotification(const QString &summary,
     content.categoryIdentifier = categoryId;
     UNTimeIntervalNotificationTrigger *trigger = [UNTimeIntervalNotificationTrigger triggerWithTimeInterval:1 repeats:NO];
     NSString *identifier = [[NSUUID UUID] UUIDString];
+
+    // Generate unique notification ID
+    static uint s_notificationId = 1;
+    uint notificationId = s_notificationId++;
+
+    // Store mapping from identifier to notification ID
+    QString identifierString = QString::fromNSString(identifier);
+    m_notificationIdMap.insert(identifierString, notificationId);
+
     UNNotificationRequest *request = [UNNotificationRequest requestWithIdentifier:identifier content:content trigger:trigger];
     [center addNotificationRequest:request withCompletionHandler:^(NSError * _Nullable error) {
         if (error) {
             NSLog(@"Failed to schedule notification: %@ (code: %ld, description: %@)", error, (long)error.code, error.localizedDescription);
+            // Remove from map if notification failed
+            QPlatformNotificationEngineDarwin *nonConstThis = const_cast<QPlatformNotificationEngineDarwin*>(this);
+            nonConstThis->m_notificationIdMap.remove(identifierString);
         }
     }];
-    return true;
+    return notificationId;
 }
 
 QPlatformNotificationEngine *qt_create_notification_engine_darwin()

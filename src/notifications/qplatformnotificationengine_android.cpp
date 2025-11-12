@@ -43,15 +43,16 @@ bool QPlatformNotificationEngineAndroid::isSupported() const
     return m_javaObject.isValid();
 }
 
-bool QPlatformNotificationEngineAndroid::sendNotification(const QString &summary,
-                                                          const QString &body,
-                                                          const QString &icon,
-                                                          const QMap<QString, QString> &actions,
-                                                          QNotifications::NotificationType type)
+uint QPlatformNotificationEngineAndroid::sendNotification(const QString &title,
+                                                          const QString &message,
+                                                          const QVariantMap &parameters,
+                                                          const QMap<QString, QString> &actions)
 {
+    QString icon = parameters.value(QStringLiteral("icon")).toString();
+
     if (!m_javaObject.isValid()) {
         qWarning("QtNotifications Android: Java object not initialized");
-        return false;
+        return 0;
     }
 
     // Robustly create Java HashMap
@@ -68,14 +69,13 @@ bool QPlatformNotificationEngineAndroid::sendNotification(const QString &summary
     }
 
     // Call Java method
-    jboolean result = m_javaObject.callMethod<jboolean>(
+    jint result = m_javaObject.callMethod<jint>(
         "sendNotification",
-        "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;I)Z",
-        QJniObject::fromString(summary).object<jstring>(),
-        QJniObject::fromString(body).object<jstring>(),
+        "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map)I",
+        QJniObject::fromString(title).object<jstring>(),
+        QJniObject::fromString(message).object<jstring>(),
         QJniObject::fromString(icon).object<jstring>(),
-        javaActions.object<jobject>(),
-        static_cast<jint>(type)); // TODO: convert to Java int
+        javaActions.object<jobject>());
 
     return result;
 }

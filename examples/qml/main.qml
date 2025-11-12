@@ -78,42 +78,6 @@ Window {
                 }
             }
 
-            // Icon path input
-            Row {
-                width: parent.width
-                spacing: 10
-                Label {
-                    text: "Icon Path:"
-                    width: 100
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-                TextField {
-                    id: iconPathField
-                    width: parent.width - 210
-                    placeholderText: "/path/to/icon.png or leave empty"
-                }
-                Button {
-                    text: "Browse..."
-                    onClicked: iconFileDialog.open()
-                }
-            }
-
-            // Notification type selector
-            Row {
-                width: parent.width
-                spacing: 10
-                Label {
-                    text: "Type:"
-                    width: 100
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-                ComboBox {
-                    id: typeCombo
-                    width: parent.width - 110
-                    model: ["Information", "Warning", "Error", "Success"]
-                    currentIndex: 0
-                }
-            }
         }
 
         Column {
@@ -127,30 +91,8 @@ Window {
                     if (notifications.isSupported()) {
                         var title = titleField.text || "QML Test"
                         var message = messageField.text || "This is a simple notification from QML!"
-                        var type = typeCombo.currentIndex
-                        notifications.sendNotification(title, message, type)
-                        logText.text += "✓ Sent simple notification (type: " + typeCombo.currentText + ")\n"
-                    } else {
-                        logText.text += "⚠ Notifications not supported\n"
-                    }
-                }
-            }
-
-            Button {
-                width: parent.width
-                text: "Send Notification with Icon"
-                onClicked: {
-                    if (notifications.isSupported()) {
-                        var title = titleField.text || "QML Test with Icon"
-                        var message = messageField.text || "This notification includes an icon path"
-                        var iconPath = iconPathField.text || ""
-                        var type = typeCombo.currentIndex
-                        if (iconPath) {
-                            notifications.sendNotification(title, message, iconPath, type)
-                            logText.text += "✓ Sent notification with icon (type: " + typeCombo.currentText + ")\n"
-                        } else {
-                            logText.text += "⚠ Please select an icon file first\n"
-                        }
+                        notifications.sendNotification(title, message)
+                        logText.text += "✓ Sent simple notification\n"
                     } else {
                         logText.text += "⚠ Notifications not supported\n"
                     }
@@ -169,9 +111,8 @@ Window {
                             "dismiss": "Dismiss",
                             "reply": "Reply"
                         }
-                        var type = typeCombo.currentIndex
-                        notifications.sendNotification(title, message, actions, type)
-                        logText.text += "✓ Sent notification with actions (type: " + typeCombo.currentText + ")\n"
+                        notifications.sendNotification(title, message, {}, actions)
+                        logText.text += "✓ Sent notification with actions\n"
                     } else {
                         logText.text += "⚠ Notifications not supported\n"
                     }

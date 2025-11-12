@@ -43,7 +43,7 @@ class QtNotifications
         }
     }
 
-    boolean sendNotification(String title, String text, String icon, Map<String, String> actions, int type) {
+    int sendNotification(String title, String text, String icon, Map<String, String> actions) {
         Log.d(TAG, "Sending notification: " + title + " - " + text);
 
         // Debug: print the class and size of the actions map
@@ -114,11 +114,11 @@ class QtNotifications
             mNotificationId++;
 
             Log.d(TAG, "Notification sent successfully with ID: " + (mNotificationId - 1));
-            return true;
+            return mNotificationId - 1;
 
         } catch (Exception e) {
             Log.e(TAG, "Error sending notification: " + e.getMessage());
-            return false;
+            return 0;
         }
     }
 

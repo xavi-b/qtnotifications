@@ -3,6 +3,7 @@
 #include <shobjidl.h>
 #include <winrt/Windows.Data.Xml.Dom.h>
 #include <winrt/Windows.UI.Notifications.h>
+#include <winrt/base.h>
 #include <combaseapi.h>
 #include <propvarutil.h>
 #include <winternl.h>
@@ -56,9 +57,11 @@ bool QPlatformNotificationEngineWindows::isSupported() const
     return osvi.dwMajorVersion >= 10;
 }
 
-bool QPlatformNotificationEngineWindows::sendNotification(const QString &summary, const QString &body, const QString &icon, const QMap<QString, QString> &actions, QNotifications::NotificationType type)
+uint QPlatformNotificationEngineWindows::sendNotification(const QString &title, const QString &message, const QVariantMap &parameters, const QMap<QString, QString> &actions)
 {
-    Q_UNUSED(type);
+    QString appLogoOverride = parameters.value(QStringLiteral("appLogoOverride")).toString();
+    QString heroImage = parameters.value(QStringLiteral("hero")).toString();
+    QString inlineImage = parameters.value(QStringLiteral("inline")).toString();
 
     ensureComInitialized();
     static uint s_notificationId = 1;
@@ -70,19 +73,19 @@ bool QPlatformNotificationEngineWindows::sendNotification(const QString &summary
     );
 
     // Add icon if provided
-    if (!icon.isEmpty()) {
-        // Support different icon formats and placements
-        // You can use: "appLogoOverride", "hero", "inline"
+    if (!appLogoOverride.isEmpty()) {
         QString placement = QStringLiteral("appLogoOverride");
+        xml += QStringLiteral("<image placement=\"%1\" src=\"%2\"/>").arg(placement, appLogoOverride);
+    }
 
-        // If icon path contains "hero" or "inline", use that placement
-        if (icon.contains(QStringLiteral("hero"), Qt::CaseInsensitive)) {
-            placement = QStringLiteral("hero");
-        } else if (icon.contains(QStringLiteral("inline"), Qt::CaseInsensitive)) {
-            placement = QStringLiteral("inline");
-        }
+    if (!heroImage.isEmpty()) {
+        QString placement = QStringLiteral("hero");
+        xml += QStringLiteral("<image placement=\"%1\" src=\"%2\"/>").arg(placement, heroImage);
+    }
 
-        xml += QStringLiteral("<image placement=\"%1\" src=\"%2\"/>").arg(placement, icon);
+    if (!inlineImage.isEmpty()) {
+        QString placement = QStringLiteral("inline");
+        xml += QStringLiteral("<image placement=\"%1\" src=\"%2\"/>").arg(placement, inlineImage);
     }
 
     xml += QStringLiteral(
@@ -90,7 +93,7 @@ bool QPlatformNotificationEngineWindows::sendNotification(const QString &summary
         "<text>%2</text>"
         "</binding>"
         "</visual>"
-    ).arg(summary, body);
+    ).arg(title, message);
     if (!actions.isEmpty()) {
         xml += QStringLiteral("<actions>");
         for (auto it = actions.constBegin(); it != actions.constEnd(); ++it) {
@@ -109,18 +112,18 @@ bool QPlatformNotificationEngineWindows::sendNotification(const QString &summary
         using DismissedHandler = winrt::Windows::Foundation::TypedEventHandler<winrt::Windows::UI::Notifications::ToastNotification, winrt::Windows::UI::Notifications::ToastDismissedEventArgs>;
         toast.Activated(ActivatedHandler{this, &QPlatformNotificationEngineWindows::onToastActivated});
         toast.Dismissed(DismissedHandler{this, &QPlatformNotificationEngineWindows::onToastDismissed});
-        // Store notificationId for use in handlers
-        m_lastNotificationId = notificationId;
+        // Store notificationId mapped to the toast object pointer
+        m_notificationIdMap.insert(get_abi(toast), notificationId);
         auto notifier = winrt::Windows::UI::Notifications::ToastNotificationManager::CreateToastNotifier(winrt::hstring(m_appUserModelID.toStdWString()));
         notifier.Show(toast);
-        return true;
+        return notificationId;
     } catch (const winrt::hresult_error &e) {
         qWarning() << "WinRT error:" << QString::fromWCharArray(e.message().c_str());
-        return false;
+        return 0;
     }
 }
 
-void QPlatformNotificationEngineWindows::ensureComInitialized()
+void QPlatformNotificationEngineWindows::ensureComInitialized() const
 {
     HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     if (hr != S_OK && hr != S_FALSE && hr != RPC_E_CHANGED_MODE) {
@@ -186,6 +189,10 @@ QPlatformNotificationEngine *qt_create_notification_engine_windows()
 // Add these private methods to the class implementation
 void QPlatformNotificationEngineWindows::onToastActivated(winrt::Windows::UI::Notifications::ToastNotification const& sender, winrt::Windows::Foundation::IInspectable const& args)
 {
+    // Look up notification ID from the sender toast object
+    const void* toastPtr = get_abi(sender);
+    uint notificationId = m_notificationIdMap.value(toastPtr, 0);
+
     QString actionKey = QStringLiteral("default");
     auto activatedArgs = args.try_as<winrt::Windows::UI::Notifications::ToastActivatedEventArgs>();
     if (activatedArgs) {
@@ -194,30 +201,40 @@ void QPlatformNotificationEngineWindows::onToastActivated(winrt::Windows::UI::No
 
     // If no specific action was invoked (empty arguments), emit notificationClicked
     if (actionKey.isEmpty() || actionKey == QStringLiteral("default")) {
-        emit notificationClicked(m_lastNotificationId);
+        emit notificationClicked(notificationId);
     } else {
-        emit actionInvoked(m_lastNotificationId, actionKey);
+        emit actionInvoked(notificationId, actionKey);
     }
-    emit notificationClosed(m_lastNotificationId, QNotifications::Closed);
+    emit notificationClosed(notificationId, QNotifications::Closed);
+
+    // Remove from map after handling
+    m_notificationIdMap.remove(toastPtr);
 }
 
 void QPlatformNotificationEngineWindows::onToastDismissed(winrt::Windows::UI::Notifications::ToastNotification const& sender, winrt::Windows::UI::Notifications::ToastDismissedEventArgs const& args)
 {
+    // Look up notification ID from the sender toast object
+    const void* toastPtr = get_abi(sender);
+    uint notificationId = m_notificationIdMap.value(toastPtr, 0);
+
     winrt::Windows::UI::Notifications::ToastDismissalReason reason = args.Reason();
     switch (reason) {
         case winrt::Windows::UI::Notifications::ToastDismissalReason::ApplicationHidden:
-            emit notificationClosed(m_lastNotificationId, QNotifications::Closed);
+            emit notificationClosed(notificationId, QNotifications::Closed);
             break;
         case winrt::Windows::UI::Notifications::ToastDismissalReason::TimedOut:
-            emit notificationClosed(m_lastNotificationId, QNotifications::Expired);
-            break;
+            emit notificationClosed(notificationId, QNotifications::Expired);
+            return; // toasts can be expired even when they are still available from the notification center
         case winrt::Windows::UI::Notifications::ToastDismissalReason::UserCanceled:
-            emit notificationClosed(m_lastNotificationId, QNotifications::Dismissed);
+            emit notificationClosed(notificationId, QNotifications::Dismissed);
             break;
         default:
-            emit notificationClosed(m_lastNotificationId, QNotifications::Undefined);
+            emit notificationClosed(notificationId, QNotifications::Undefined);
             break;
     }
+
+    // Remove from map after handling
+    m_notificationIdMap.remove(toastPtr);
 }
 
 QT_END_NAMESPACE

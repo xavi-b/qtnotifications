@@ -16,11 +16,10 @@ public:
     virtual ~QPlatformNotificationEngine() = default;
 
     virtual bool isSupported() const = 0;
-    virtual bool sendNotification(const QString &title,
+    virtual uint sendNotification(const QString &title,
                                  const QString &message,
-                                 const QString &iconPath,
-                                 const QMap<QString, QString> &actions,
-                                 QNotifications::NotificationType type) = 0;
+                                 const QVariantMap &parameters,
+                                 const QMap<QString, QString> &actions) = 0;
 
 signals:
     void actionInvoked(uint notificationId, const QString &actionKey);

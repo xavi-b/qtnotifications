@@ -1,0 +1,183 @@
+// Copyright (C) 2025 The Qt Company Ltd.
+// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GFDL-1.3-no-invariants-only
+
+/*!
+    \page qtnotifications-engines.html
+    \title Qt Notifications Engines
+    \brief Platform-specific notification engine documentation
+
+    \l{Qt Notifications} supports platform-specific notification engines that provide
+    native notification functionality on different operating systems. The appropriate
+    engine is automatically selected based on the target platform.
+
+    Each platform engine uses the native notification APIs available on that system,
+    providing a consistent Qt API while leveraging platform-specific features and
+    capabilities.
+
+    \section1 Windows
+
+    The Windows engine uses the \l{https://docs.microsoft.com/en-us/uwp/api/windows.ui.notifications}
+    {Windows.UI.Notifications} API (WinRT Toast Notifications). It requires Windows 10
+    or later and a recent Windows SDK with C++/WinRT support.
+
+    \note The Windows engine is not available when using the MinGW compiler, as it
+    requires C++/WinRT support which is only available with MSVC.
+
+    The engine automatically sets up the AppUserModelID (AUMID) for the application
+    using the organization domain and application name. This is required for Windows
+    toast notifications to work properly.
+
+    \section2 Parameters
+
+    The Windows engine supports the following parameters in the \c parameters QVariantMap:
+
+    \table
+        \header
+            \li Parameter
+            \li Type
+            \li Description
+        \row
+            \li \c appLogoOverride
+            \li QString
+            \li Path to app logo image for Windows toast notifications
+        \row
+            \li \c hero
+            \li QString
+            \li Path to hero image for Windows toast notifications
+        \row
+            \li \c inline
+            \li QString
+            \li Path to inline image for Windows toast notifications
+    \endtable
+
+    \section1 Darwin (macOS and iOS)
+
+    The Darwin engine uses the \l{https://developer.apple.com/documentation/usernotifications}
+    {UserNotifications} framework, which is available on macOS 10.14+ and iOS 10.0+.
+
+    \note The app must be properly bundled (as a .app bundle) and signed for notifications
+    to work. Command-line applications cannot use notifications.
+
+    The engine automatically requests notification permissions when first used. The user
+    must grant permission for notifications to be displayed.
+
+    \section2 Parameters
+
+    The Darwin engine supports the following parameters in the \c parameters QVariantMap:
+
+    \table
+        \header
+            \li Parameter
+            \li Type
+            \li Description
+        \row
+            \li \c icon
+            \li QString
+            \li Path to an icon image file that will be attached to the notification
+    \endtable
+
+    \section1 Linux
+
+    The Linux engine uses the \l{https://specifications.freedesktop.org/notification-spec/notification-spec-latest.html}
+    {Desktop Notifications Specification} via D-Bus. It communicates with the
+    \c org.freedesktop.Notifications service, which is provided by desktop environments
+    such as GNOME, KDE, Xfce, and others.
+
+    \note The engine requires a D-Bus session bus connection and a compatible notification
+    daemon (such as \c notify-osd, \c dunst, or the desktop environment's notification
+    daemon).
+
+    \section2 Parameters
+
+    The Linux engine supports the following parameters in the \c parameters QVariantMap:
+
+    \table
+        \header
+            \li Parameter
+            \li Type
+            \li Description
+        \row
+            \li \c icon
+            \li QString
+            \li Path to an icon image file or icon name (file path or icon name)
+        \row
+            \li \c urgency
+            \li int
+            \li Urgency level: 0=Low, 1=Normal, 2=Critical
+        \row
+            \li \c expire-timeout
+            \li int
+            \li Expiration timeout in milliseconds
+                \note If -1, the notification's expiration time is dependent on the notification server's settings, and may vary for the type of notification. If 0, never expire.
+        \row
+            \li \c image-data
+            \li QVariantMap
+            \li Image data for the notification
+                \note The image data is a QVariantMap with the following keys: width, height, rowstride, has_alpha, bits_per_sample, channels, data.
+    \endtable
+
+    \section1 Android
+
+    The Android engine uses the \l{https://developer.android.com/reference/android/app/NotificationManager}
+    {NotificationManager} API from the Android SDK. It requires Android API level 16 (Jelly Bean)
+    or later.
+
+    \note The app must request the \c POST_NOTIFICATIONS permission in the AndroidManifest.xml
+    for Android 13 (API level 33) and later.
+
+    The engine automatically creates a notification channel and handles notification actions
+    through a BroadcastReceiver.
+
+    \section2 Parameters
+
+    The Android engine supports the following parameters in the \c parameters QVariantMap:
+
+    \table
+        \header
+            \li Parameter
+            \li Type
+            \li Description
+        \row
+            \li \c icon
+            \li QString
+            \li Path to an icon image file (support depends on platform capabilities)
+    \endtable
+
+    \section1 Notification Actions
+
+    All engines support action buttons through the \c actions QVariantMap parameter.
+    The map keys are action identifiers (used in the \l{QNotifications::actionInvoked()}
+    {actionInvoked()} signal), and the values are the display text for the action buttons.
+
+    \code
+    QVariantMap actions;
+    actions["open"] = "Open";
+    actions["dismiss"] = "Dismiss";
+    actions["reply"] = "Reply";
+
+    notifications.sendNotification("Title", "Message", QVariantMap(), actions);
+    \endcode
+
+    When an action is invoked, the \l{QNotifications::actionInvoked()}{actionInvoked()}
+    signal is emitted with the notification ID and the action key.
+
+    \section2 Action Limits by Platform
+
+    \table
+        \header
+            \li Platform
+            \li Maximum Number of Actions
+        \row
+            \li Windows
+            \li 5
+        \row
+            \li Darwin (macOS and iOS)
+            \li No specified limit (platform-dependent)
+        \row
+            \li Linux
+            \li No specified limit (notification daemon-dependent)
+        \row
+            \li Android
+            \li 3
+    \endtable
+*/

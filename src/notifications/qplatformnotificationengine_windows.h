@@ -19,14 +19,13 @@ public:
     ~QPlatformNotificationEngineWindows() = default;
 
     bool isSupported() const override;
-    bool sendNotification(const QString &title,
+    uint sendNotification(const QString &title,
                          const QString &message,
-                         const QString &iconPath,
-                         const QMap<QString, QString> &actions,
-                         QNotifications::NotificationType type) override;
+                         const QVariantMap &parameters,
+                         const QMap<QString, QString> &actions) override;
 
 private:
-    void ensureComInitialized();
+    void ensureComInitialized() const;
     void setAppUserModelID();
 
     // Event handler methods for toast events
@@ -34,7 +33,8 @@ private:
     void onToastDismissed(winrt::Windows::UI::Notifications::ToastNotification const& sender, winrt::Windows::UI::Notifications::ToastDismissedEventArgs const& args);
 
     QString m_appUserModelID;
-    uint m_lastNotificationId = 0;
+    // Map from ToastNotification pointer to notification ID
+    QHash<const void*, uint> m_notificationIdMap;
 };
 
 QPlatformNotificationEngine *qt_create_notification_engine_windows();

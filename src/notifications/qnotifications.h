@@ -17,14 +17,6 @@ public:
     explicit QNotifications(QObject *parent = nullptr);
     ~QNotifications();
 
-    enum NotificationType {
-        Information,
-        Warning,
-        Error,
-        Success
-    };
-    Q_ENUM(NotificationType)
-
     enum ClosedReason {
         Expired,
         Dismissed,
@@ -35,23 +27,10 @@ public:
 
     bool isSupported() const;
 
-    bool sendNotification(const QString &title,
+    uint sendNotification(const QString &title,
                          const QString &message,
-                         NotificationType type = Information);
-
-    bool sendNotification(const QString &title,
-                         const QString &message,
-                         const QString &iconPath,
-                         NotificationType type = Information);
-    bool sendNotification(const QString &title,
-                         const QString &message,
-                         const QMap<QString, QString> &actions,
-                         NotificationType type = Information);
-    bool sendNotification(const QString &title,
-                         const QString &message,
-                         const QString &iconPath,
-                         const QMap<QString, QString> &actions,
-                         NotificationType type = Information);
+                         const QVariantMap &parameters = {},
+                         const QMap<QString, QString> &actions = {});
 
 Q_SIGNALS:
     void actionInvoked(uint notificationId, const QString &actionKey);

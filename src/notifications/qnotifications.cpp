@@ -9,7 +9,6 @@ QT_BEGIN_NAMESPACE
     \brief The QNotifications class provides a cross-platform API for sending system notifications.
 
     QNotifications allows you to send notifications to the user's desktop notification system.
-    It supports different notification types, custom icons, and action buttons.
 
     \section1 Basic Usage
 
@@ -34,33 +33,16 @@ QT_BEGIN_NAMESPACE
     QMap<QString, QString> actions;
     actions["open"] = "Open";
     actions["dismiss"] = "Dismiss";
-    notifications.sendNotification("Title", "Message", actions);
+    notifications.sendNotification("Title", "Message", {}, actions);
     \endcode
 
     When an action is invoked, the \l actionInvoked() signal is emitted.
-
-    \sa NotificationType
-*/
-
-/*!
-    \enum QNotifications::NotificationType
-
-    This enum describes the type of notification.
-
-    \value Information
-        General informational notification.
-    \value Warning
-        Warning notification.
-    \value Error
-        Error notification.
-    \value Success
-        Success notification.
 */
 
 /*!
     \enum QNotifications::ClosedReason
 
-    This enum describes the type of notification.
+    This enum describes the reason for the notification being closed.
 
     \value Expired
         The notification timed out and was closed automatically by the server.
@@ -130,76 +112,22 @@ bool QNotifications::isSupported() const
 }
 
 /*!
-    Sends a notification with the given \a title, \a message, and \a type.
-
-    Returns \c true if the notification was sent successfully; otherwise returns \c false.
-
-    \sa NotificationType
-*/
-bool QNotifications::sendNotification(const QString &title,
-                                     const QString &message,
-                                     NotificationType type)
-{
-    return sendNotification(title, message, QString(), {}, type);
-}
-
-/*!
-    Sends a notification with the given \a title, \a message, \a iconPath, and \a type.
-
-    The \a iconPath should be a path to an image file. The format and size requirements
-    depend on the platform.
-
-    Returns \c true if the notification was sent successfully; otherwise returns \c false.
-
-    \sa NotificationType
-*/
-bool QNotifications::sendNotification(const QString &title,
-                                     const QString &message,
-                                     const QString &iconPath,
-                                     NotificationType type)
-{
-    return sendNotification(title, message, iconPath, {}, type);
-}
-
-/*!
-    Sends a notification with the given \a title, \a message, \a actions, and \a type.
-
-    The \a actions parameter is a map where keys are action identifiers and values
-    are the display text for the action buttons.
-
-    Returns \c true if the notification was sent successfully; otherwise returns \c false.
-
-    When an action is invoked, the \l actionInvoked() signal is emitted with the
-    notification ID and the action key.
-
-    \sa actionInvoked(), NotificationType
-*/
-bool QNotifications::sendNotification(const QString &title,
-                                     const QString &message,
-                                     const QMap<QString, QString> &actions,
-                                     NotificationType type)
-{
-    return sendNotification(title, message, QString(), actions, type);
-}
-
-/*!
-    Sends a notification with the given \a title, \a message, \a iconPath, \a actions, and \a type.
+    Sends a notification with the given \a title, \a message, \a parameters, and \a actions.
 
     This is the most complete form of sendNotification(), including all optional features.
 
-    Returns \c true if the notification was sent successfully; otherwise returns \c false.
+    Returns the ID of the notification that was sent.
 
-    \sa actionInvoked(), NotificationType
+    \sa actionInvoked()
 */
-bool QNotifications::sendNotification(const QString &title,
+uint QNotifications::sendNotification(const QString &title,
                                      const QString &message,
-                                     const QString &iconPath,
-                                     const QMap<QString, QString> &actions,
-                                     NotificationType type)
+                                     const QVariantMap &parameters,
+                                     const QMap<QString, QString> &actions)
 {
     if (!m_engine)
-        return false;
-    return m_engine->sendNotification(title, message, iconPath, actions, type);
+        return 0;
+    return m_engine->sendNotification(title, message, parameters, actions);
 }
 
 QT_END_NAMESPACE

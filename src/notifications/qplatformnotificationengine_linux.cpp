@@ -29,8 +29,12 @@ bool QPlatformNotificationEngineLinux::isSupported() const
     return QDBusConnection::sessionBus().isConnected();
 }
 
-bool QPlatformNotificationEngineLinux::sendNotification(const QString &summary, const QString &body, const QString &icon, const QMap<QString, QString> &actions, QNotifications::NotificationType type)
+uint QPlatformNotificationEngineLinux::sendNotification(const QString &title, const QString &message, const QVariantMap &parameters, const QMap<QString, QString> &actions)
 {
+    int urgency = parameters.value(QStringLiteral("urgency")).toInt();
+    QString icon = parameters.value(QStringLiteral("icon")).toString();
+    int expireTimeout = parameters.value(QStringLiteral("expire-timeout"), -1).toInt();
+
     QDBusMessage msg = QDBusMessage::createMethodCall(
         QStringLiteral("org.freedesktop.Notifications"),
         QStringLiteral("/org/freedesktop/Notifications"),
@@ -47,30 +51,43 @@ bool QPlatformNotificationEngineLinux::sendNotification(const QString &summary, 
     for (auto it = actions.constBegin(); it != actions.constEnd(); ++it)
         actionList << it.key() << it.value();
 
-    int urgency = 0;
-
-    if (type == QNotifications::Warning || type == QNotifications::Error)
-        urgency = 2;
-    else if (type == QNotifications::Success)
-        urgency = 1;
-
     QVariantMap map;
     map.insert(QStringLiteral("urgency"), urgency);
+
+    // Handle image-data structure (iiibiiay)
+    QVariant imageDataParam = parameters.value(QStringLiteral("image-data"));
+    if (imageDataParam.isValid()) {
+        if (imageDataParam.typeId() == QMetaType::QVariantMap) {
+            // Build DBus structure (iiibiiay) from QVariantMap
+            QVariantMap imageDataMap = imageDataParam.toMap();
+            QDBusArgument imageDataArg;
+            imageDataArg.beginStructure();
+            imageDataArg << imageDataMap.value(QStringLiteral("width")).toInt();
+            imageDataArg << imageDataMap.value(QStringLiteral("height")).toInt();
+            imageDataArg << imageDataMap.value(QStringLiteral("rowstride")).toInt();
+            imageDataArg << imageDataMap.value(QStringLiteral("has_alpha")).toBool();
+            imageDataArg << imageDataMap.value(QStringLiteral("bits_per_sample")).toInt();
+            imageDataArg << imageDataMap.value(QStringLiteral("channels")).toInt();
+            imageDataArg << imageDataMap.value(QStringLiteral("data")).toByteArray();
+            imageDataArg.endStructure();
+            map.insert(QStringLiteral("image-data"), QVariant::fromValue(imageDataArg));
+        }
+    }
 
     args << QStringLiteral("qtnotifications")
          << uint(0)
          << icon
-         << summary
-         << body
+         << title
+         << message
          << QVariant::fromValue(actionList)
          << map
-         << int(5000);
+         << expireTimeout;
 
     msg.setArguments(args);
     QDBusMessage reply = QDBusConnection::sessionBus().call(msg);
     if (reply.type() == QDBusMessage::ReplyMessage && !reply.arguments().isEmpty())
-        return true;
-    return false;
+        return reply.arguments().first().toUInt();
+    return 0;
 }
 
 void QPlatformNotificationEngineLinux::onActionInvoked(uint id, const QString &actionKey)

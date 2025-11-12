@@ -20,11 +20,10 @@ public:
     explicit QPlatformNotificationEngineAndroid(QObject *parent = nullptr);
 
     bool isSupported() const override;
-    bool sendNotification(const QString &title,
+    uint sendNotification(const QString &title,
                           const QString &message,
-                          const QString &iconPath,
-                          const QMap<QString, QString> &actions,
-                          QNotifications::NotificationType type) override;
+                          const QVariantMap &parameters,
+                          const QMap<QString, QString> &actions) override;
 
 private:
     QJniObject m_javaObject;

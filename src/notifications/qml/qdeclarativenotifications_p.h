@@ -17,22 +17,10 @@ public:
     explicit QDeclarativeNotifications(QObject *parent = nullptr);
 
     Q_INVOKABLE bool isSupported() const;
-    Q_INVOKABLE bool sendNotification(const QString &title,
+    Q_INVOKABLE uint sendNotification(const QString &title,
                                       const QString &message,
-                                      QNotifications::NotificationType type = QNotifications::Information);
-    Q_INVOKABLE bool sendNotification(const QString &title,
-                                      const QString &message,
-                                      const QString &iconPath,
-                                      QNotifications::NotificationType type = QNotifications::Information);
-    Q_INVOKABLE bool sendNotification(const QString &title,
-                                      const QString &message,
-                                      const QVariantMap &actions,
-                                      QNotifications::NotificationType type = QNotifications::Information);
-    Q_INVOKABLE bool sendNotification(const QString &title,
-                                      const QString &message,
-                                      const QString &iconPath,
-                                      const QMap<QString, QString> &actions,
-                                      QNotifications::NotificationType type = QNotifications::Information);
+                                      const QVariantMap &parameters = {},
+                                      const QVariantMap &actions = {});
 
 signals:
     void actionInvoked(uint notificationId, const QString &actionKey);

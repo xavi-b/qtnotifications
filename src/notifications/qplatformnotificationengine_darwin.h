@@ -6,7 +6,6 @@
 #include <QtCore/QString>
 #include <QtCore/QHash>
 
-
 QT_BEGIN_NAMESPACE
 
 class QPlatformNotificationEngineDarwin;
@@ -20,19 +19,20 @@ public:
     explicit QPlatformNotificationEngineDarwin(QObject *parent = nullptr);
     ~QPlatformNotificationEngineDarwin();
 
-    void handleActionInvoked(uint notificationId, const QString &actionKey);
-    void handleNotificationClosed(uint notificationId, QNotifications::ClosedReason reason);
-    void handleNotificationClicked(uint notificationId);
+    void handleActionInvoked(const QString &notificationIdentifier, const QString &actionKey);
+    void handleNotificationClosed(const QString &notificationIdentifier, QNotifications::ClosedReason reason);
+    void handleNotificationClicked(const QString &notificationIdentifier);
 
     bool isSupported() const override;
-    bool sendNotification(const QString &title,
+    uint sendNotification(const QString &title,
                          const QString &message,
-                         const QString &iconPath,
-                         const QMap<QString, QString> &actions,
-                         QNotifications::NotificationType type) override;
+                         const QVariantMap &parameters,
+                         const QMap<QString, QString> &actions) override;
 
 private:
     DarwinNotificationDelegate* m_delegate;
+    // Map from notification identifier (UUID string) to notification ID
+    mutable QHash<QString, uint> m_notificationIdMap;
 };
 
 QPlatformNotificationEngine *qt_create_notification_engine_darwin();

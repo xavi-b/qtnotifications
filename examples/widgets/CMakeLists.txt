@@ -15,6 +15,12 @@ qt_add_executable(notifications_example_widgets
     main.cpp
 )
 
+qt_add_resources(notifications_example_widgets
+    "images"
+    FILES
+    images/test.png
+)
+
 # Set up the executable properties
 set_target_properties(notifications_example_widgets PROPERTIES
     VERSION 1.0.0

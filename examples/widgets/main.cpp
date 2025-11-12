@@ -9,12 +9,19 @@
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QMessageBox>
-#include <QtCore/QTimer>
-#include <QtCore/QDateTime>
+#include <QtWidgets/QTableWidget>
+#include <QtWidgets/QHeaderView>
+#include <QtWidgets/QAbstractItemView>
 #include <QtWidgets/QFileDialog>
-#include <QtCore/QDir>
-#include <qnotifications.h>
+#include <QtCore/QDateTime>
 #include <QtCore/QDebug>
+#include <QtCore/QDir>
+#include <QtCore/QFileInfo>
+#include <QtCore/QStandardPaths>
+#include <QtCore/QTimer>
+#include <QtGui/QImage>
+#include <QtGui/QPixmap>
+#include <qnotifications.h>
 
 class NotificationsWidget : public QMainWindow
 {
@@ -37,27 +44,151 @@ public:
     }
 
 private:
-    void sendSimpleNotification()
+    QVariantMap getParameters() const
     {
-        bool success = notifications->sendNotification(
-            titleEdit->text().isEmpty() ? "Qt Notifications Test" : titleEdit->text(),
-            messageEdit->toPlainText().isEmpty() ? "This is a test notification from the Qt Notifications module!" : messageEdit->toPlainText(),
-            getNotificationType()
-        );
+        QVariantMap params;
+        for (int row = 0; row < parametersTable->rowCount(); ++row) {
+            QTableWidgetItem *keyItem = parametersTable->item(row, 0);
+            QTableWidgetItem *valueItem = parametersTable->item(row, 1);
+            if (keyItem && valueItem && !keyItem->text().isEmpty()) {
+                QString key = keyItem->text();
+                QString value = valueItem->text();
+                // Try to convert to int if it's a valid number
+                bool ok;
+                int intValue = value.toInt(&ok);
+                if (ok && intValue != 0) {
+                    params[key] = intValue;
+                } else {
+                    params[key] = value;
+                }
+            }
+        }
 
-        updateStatus(success ? "Simple notification sent successfully!" : "Failed to send simple notification");
+        // Build image-data structure for Linux if image is loaded
+        if (!m_loadedImage.isNull()) {
+            QVariantMap imageDataStruct = buildImageDataStructure(m_loadedImage);
+            if (!imageDataStruct.isEmpty()) {
+                params["image-data"] = imageDataStruct;
+            }
+
+            QString tempPath = saveImageToTempFile(m_loadedImage);
+            params["appLogoOverride"] = tempPath;
+        }
+
+        return params;
     }
 
-    void sendNotificationWithIcon()
+    QVariantMap buildImageDataStructure(const QImage &image) const
     {
-        bool success = notifications->sendNotification(
-            titleEdit->text().isEmpty() ? "Qt Notifications Test 2" : titleEdit->text(),
-            messageEdit->toPlainText().isEmpty() ? "This notification includes an icon path (if supported)" : messageEdit->toPlainText(),
-            iconPathEdit->text().isEmpty() ? "/path/to/icon.png" : iconPathEdit->text(),
-            getNotificationType()
+        if (image.isNull())
+            return QVariantMap();
+
+        // Convert to RGB or RGBA format
+        QImage convertedImage = image;
+        bool hasAlpha = image.hasAlphaChannel();
+
+        if (hasAlpha) {
+            convertedImage = image.convertToFormat(QImage::Format_RGBA8888);
+        } else {
+            convertedImage = image.convertToFormat(QImage::Format_RGB888);
+        }
+
+        int width = convertedImage.width();
+        int height = convertedImage.height();
+        int rowstride = convertedImage.bytesPerLine();
+        int channels = hasAlpha ? 4 : 3;
+        int bitsPerSample = 8;
+
+        // Get image data in RGB/RGBA byte order
+        QByteArray imageData;
+        const uchar *bits = convertedImage.constBits();
+        int dataSize = convertedImage.sizeInBytes();
+        imageData = QByteArray(reinterpret_cast<const char*>(bits), dataSize);
+
+        // Build the DBus structure (iiibiiay)
+        QVariantMap imageDataStruct;
+        imageDataStruct["width"] = width;
+        imageDataStruct["height"] = height;
+        imageDataStruct["rowstride"] = rowstride;
+        imageDataStruct["has_alpha"] = hasAlpha;
+        imageDataStruct["bits_per_sample"] = bitsPerSample;
+        imageDataStruct["channels"] = channels;
+        imageDataStruct["data"] = imageData;
+
+        return imageDataStruct;
+    }
+
+    QString saveImageToTempFile(const QImage &image) const
+    {
+        QString tempPath = QStandardPaths::writableLocation(QStandardPaths::TempLocation)
+                           + "/notification_icon.png";
+        image.save(tempPath);
+        return tempPath;
+    }
+
+    void loadImageFromResource()
+    {
+        QString imagePath = ":/images/test.png";
+
+        QImage image(imagePath);
+        if (image.isNull())
+            return;
+
+        m_loadedImage = image;
+        imagePreviewLabel->setPixmap(QPixmap::fromImage(image.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+        imagePathLabel->setText(QString("Loaded: %1 (%2x%3)").arg(imagePath).arg(image.width()).arg(image.height()));
+        updateStatus(QString("Image loaded: %1 (%2x%3, %4 channels)")
+                     .arg(imagePath)
+                     .arg(image.width())
+                     .arg(image.height())
+                     .arg(image.hasAlphaChannel() ? 4 : 3));
+    }
+
+    void loadImageFromFile()
+    {
+        QString fileName = QFileDialog::getOpenFileName(this,
+            tr("Select Image File"),
+            QDir::homePath(),
+            tr("Image Files (*.png *.jpg *.jpeg *.bmp);;All Files (*)"));
+
+        if (!fileName.isEmpty()) {
+            QImage image(fileName);
+            if (image.isNull()) {
+                QMessageBox::warning(this, "Invalid Image",
+                    "Failed to load image from: " + fileName);
+                return;
+            }
+
+            m_loadedImage = image;
+            imagePreviewLabel->setPixmap(QPixmap::fromImage(image.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+            imagePathLabel->setText(QString("Loaded: %1 (%2x%3)").arg(QFileInfo(fileName).fileName()).arg(image.width()).arg(image.height()));
+            updateStatus(QString("Image loaded from file: %1 (%2x%3, %4 channels)")
+                         .arg(fileName)
+                         .arg(image.width())
+                         .arg(image.height())
+                         .arg(image.hasAlphaChannel() ? 4 : 3));
+        }
+    }
+
+    void clearImage()
+    {
+        m_loadedImage = QImage();
+        imagePreviewLabel->clear();
+        imagePreviewLabel->setText("No image");
+        imagePathLabel->clear();
+        updateStatus("Image cleared");
+    }
+
+    void sendSimpleNotification()
+    {
+        QVariantMap params = getParameters();
+        uint notificationId = notifications->sendNotification(
+            titleEdit->text().isEmpty() ? "Qt Notifications Test" : titleEdit->text(),
+            messageEdit->toPlainText().isEmpty() ? "This is a test notification from the Qt Notifications module!" : messageEdit->toPlainText(),
+            params
         );
 
-        updateStatus(success ? "Notification with icon sent successfully!" : "Failed to send notification with icon");
+        updateStatus(notificationId > 0 ? QString("Simple notification sent successfully! (ID: %1)").arg(notificationId) : "Failed to send simple notification");
     }
 
     void sendNotificationWithActions()
@@ -67,14 +198,32 @@ private:
         actions["dismiss"] = "Dismiss";
         actions["reply"] = "Reply";
 
-        bool success = notifications->sendNotification(
+        QVariantMap params = getParameters();
+        uint notificationId = notifications->sendNotification(
             titleEdit->text().isEmpty() ? "Qt Notifications with Actions" : titleEdit->text(),
             messageEdit->toPlainText().isEmpty() ? "Choose an action below:" : messageEdit->toPlainText(),
-            actions,
-            getNotificationType()
+            params,
+            actions
         );
 
-        updateStatus(success ? "Notification with actions sent successfully!" : "Failed to send notification with actions");
+        updateStatus(notificationId > 0 ? QString("Notification with actions sent successfully! (ID: %1)").arg(notificationId) : "Failed to send notification with actions");
+    }
+
+    void addParameterRow()
+    {
+        int row = parametersTable->rowCount();
+        parametersTable->insertRow(row);
+        parametersTable->setItem(row, 0, new QTableWidgetItem());
+        parametersTable->setItem(row, 1, new QTableWidgetItem());
+        parametersTable->selectRow(row);
+    }
+
+    void removeParameterRow()
+    {
+        int currentRow = parametersTable->currentRow();
+        if (currentRow >= 0) {
+            parametersTable->removeRow(currentRow);
+        }
     }
 
     void onNotificationClosed(uint notificationId, QNotifications::ClosedReason closedReason)
@@ -90,19 +239,6 @@ private:
     void onNotificationClicked(uint notificationId)
     {
         updateStatus(QString("Notification %1 was clicked!").arg(notificationId));
-    }
-
-    void browseIconFile()
-    {
-        QString fileName = QFileDialog::getOpenFileName(this,
-            tr("Select Icon File"),
-            QDir::homePath(),
-            tr("Image Files (*.png *.jpg *.jpeg *.bmp *.ico *.svg);;All Files (*)"));
-
-        if (!fileName.isEmpty()) {
-            iconPathEdit->setText(fileName);
-            updateStatus(QString("Icon file selected: %1").arg(fileName));
-        }
     }
 
 private:
@@ -134,42 +270,97 @@ private:
         messageLayout->addWidget(messageEdit);
         inputLayout->addLayout(messageLayout);
 
-        // Icon path input
-        QHBoxLayout *iconLayout = new QHBoxLayout();
-        iconLayout->addWidget(new QLabel("Icon Path:", this));
-        iconPathEdit = new QLineEdit(this);
-        iconPathEdit->setPlaceholderText("/path/to/icon.png");
-        iconLayout->addWidget(iconPathEdit);
-
-        QPushButton *browseBtn = new QPushButton("Browse...", this);
-        connect(browseBtn, &QPushButton::clicked, this, &NotificationsWidget::browseIconFile);
-        iconLayout->addWidget(browseBtn);
-
-        inputLayout->addLayout(iconLayout);
-
-        // Notification type selector
-        QHBoxLayout *typeLayout = new QHBoxLayout();
-        typeLayout->addWidget(new QLabel("Type:", this));
-        typeCombo = new QComboBox(this);
-        typeCombo->addItem("Information", QNotifications::Information);
-        typeCombo->addItem("Success", QNotifications::Success);
-        typeCombo->addItem("Warning", QNotifications::Warning);
-        typeCombo->addItem("Error", QNotifications::Error);
-        typeLayout->addWidget(typeCombo);
-        inputLayout->addLayout(typeLayout);
-
         mainLayout->addWidget(inputGroup);
+
+        // Parameters group
+        QGroupBox *parametersGroup = new QGroupBox("Parameters (Platform-specific)", this);
+        QVBoxLayout *parametersLayout = new QVBoxLayout(parametersGroup);
+
+        QLabel *paramsHint = new QLabel("Add platform-specific parameters (e.g., icon, urgency, appLogoOverride, etc.)", this);
+        paramsHint->setWordWrap(true);
+        paramsHint->setStyleSheet("color: gray; font-style: italic;");
+        parametersLayout->addWidget(paramsHint);
+
+        parametersTable = new QTableWidget(this);
+        parametersTable->setColumnCount(2);
+        parametersTable->setHorizontalHeaderLabels(QStringList() << "Key" << "Value");
+        parametersTable->horizontalHeader()->setStretchLastSection(true);
+        parametersTable->setMaximumHeight(150);
+        parametersTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+        parametersLayout->addWidget(parametersTable);
+
+        QHBoxLayout *paramButtonsLayout = new QHBoxLayout();
+        QPushButton *addParamBtn = new QPushButton("Add Parameter", this);
+        QPushButton *removeParamBtn = new QPushButton("Remove Parameter", this);
+        paramButtonsLayout->addWidget(addParamBtn);
+        paramButtonsLayout->addWidget(removeParamBtn);
+        paramButtonsLayout->addStretch();
+        parametersLayout->addLayout(paramButtonsLayout);
+
+        // Add some common parameter examples
+        int row = 0;
+        parametersTable->insertRow(row);
+        parametersTable->setItem(row, 0, new QTableWidgetItem("icon"));
+        parametersTable->setItem(row, 1, new QTableWidgetItem(""));
+        row++;
+        parametersTable->insertRow(row);
+        parametersTable->setItem(row, 0, new QTableWidgetItem("urgency"));
+        parametersTable->setItem(row, 1, new QTableWidgetItem("1"));
+
+        connect(addParamBtn, &QPushButton::clicked, this, &NotificationsWidget::addParameterRow);
+        connect(removeParamBtn, &QPushButton::clicked, this, &NotificationsWidget::removeParameterRow);
+
+        mainLayout->addWidget(parametersGroup);
+
+        // Image Data group (for Linux image-data DBus structure)
+        QGroupBox *imageDataGroup = new QGroupBox("Image Data (Linux image-data)", this);
+        QVBoxLayout *imageDataLayout = new QVBoxLayout(imageDataGroup);
+
+        QLabel *imageDataHint = new QLabel(
+            "For Linux: Load an image to create image-data DBus structure (iiibiiay).\n"
+            "The structure contains: width, height, rowstride, has_alpha, bits_per_sample, channels, data.", this);
+        imageDataHint->setWordWrap(true);
+        imageDataHint->setStyleSheet("color: gray; font-style: italic;");
+        imageDataLayout->addWidget(imageDataHint);
+
+        QHBoxLayout *imageButtonsLayout = new QHBoxLayout();
+        QPushButton *loadFromResourceBtn = new QPushButton("Load from QRC", this);
+        QPushButton *loadFromFileBtn = new QPushButton("Load from File", this);
+        QPushButton *clearImageBtn = new QPushButton("Clear", this);
+        imageButtonsLayout->addWidget(loadFromResourceBtn);
+        imageButtonsLayout->addWidget(loadFromFileBtn);
+        imageButtonsLayout->addWidget(clearImageBtn);
+        imageButtonsLayout->addStretch();
+        imageDataLayout->addLayout(imageButtonsLayout);
+
+        QHBoxLayout *imagePreviewLayout = new QHBoxLayout();
+        imagePreviewLabel = new QLabel("No image", this);
+        imagePreviewLabel->setMinimumSize(64, 64);
+        imagePreviewLabel->setMaximumSize(64, 64);
+        imagePreviewLabel->setAlignment(Qt::AlignCenter);
+        imagePreviewLabel->setStyleSheet("border: 1px solid gray; background-color: #f0f0f0;");
+        imagePreviewLayout->addWidget(imagePreviewLabel);
+
+        imagePathLabel = new QLabel("", this);
+        imagePathLabel->setWordWrap(true);
+        imagePreviewLayout->addWidget(imagePathLabel);
+        imagePreviewLayout->addStretch();
+        imageDataLayout->addLayout(imagePreviewLayout);
+
+        connect(loadFromResourceBtn, &QPushButton::clicked, this, &NotificationsWidget::loadImageFromResource);
+        connect(loadFromFileBtn, &QPushButton::clicked, this, &NotificationsWidget::loadImageFromFile);
+        connect(clearImageBtn, &QPushButton::clicked, this, &NotificationsWidget::clearImage);
+
+        mainLayout->addWidget(imageDataGroup);
 
         // Buttons group
         QGroupBox *buttonsGroup = new QGroupBox("Send Notifications", this);
         QVBoxLayout *buttonsLayout = new QVBoxLayout(buttonsGroup);
 
         QPushButton *simpleBtn = new QPushButton("Send Simple Notification", this);
-        QPushButton *iconBtn = new QPushButton("Send Notification with Icon", this);
         QPushButton *actionsBtn = new QPushButton("Send Notification with Actions", this);
 
         buttonsLayout->addWidget(simpleBtn);
-        buttonsLayout->addWidget(iconBtn);
         buttonsLayout->addWidget(actionsBtn);
 
         mainLayout->addWidget(buttonsGroup);
@@ -185,7 +376,6 @@ private:
 
         // Connect button signals
         connect(simpleBtn, &QPushButton::clicked, this, &NotificationsWidget::sendSimpleNotification);
-        connect(iconBtn, &QPushButton::clicked, this, &NotificationsWidget::sendNotificationWithIcon);
         connect(actionsBtn, &QPushButton::clicked, this, &NotificationsWidget::sendNotificationWithActions);
     }
 
@@ -199,11 +389,6 @@ private:
                 this, &NotificationsWidget::onNotificationClicked);
     }
 
-    QNotifications::NotificationType getNotificationType()
-    {
-        return static_cast<QNotifications::NotificationType>(typeCombo->currentData().toInt());
-    }
-
     void updateStatus(const QString &message)
     {
         QString timestamp = QDateTime::currentDateTime().toString("hh:mm:ss");
@@ -215,8 +400,10 @@ private:
     QNotifications *notifications;
     QLineEdit *titleEdit;
     QTextEdit *messageEdit;
-    QLineEdit *iconPathEdit;
-    QComboBox *typeCombo;
+    QTableWidget *parametersTable;
+    QLabel *imagePreviewLabel;
+    QLabel *imagePathLabel;
+    QImage m_loadedImage;
     QTextEdit *statusText;
 };
 
@@ -225,7 +412,7 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
 
     NotificationsWidget widget;
-    widget.show();
+    widget.showMaximized();
 
     return app.exec();
 }
