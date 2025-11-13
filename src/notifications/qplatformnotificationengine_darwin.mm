@@ -103,8 +103,6 @@ void QPlatformNotificationEngineDarwin::handleActionInvoked(const QString &notif
 {
     uint notificationId = m_notificationIdMap.value(notificationIdentifier, 0);
     emit actionInvoked(notificationId, actionKey);
-    // Remove from map after handling
-    m_notificationIdMap.remove(notificationIdentifier);
 }
 
 void QPlatformNotificationEngineDarwin::handleNotificationClosed(const QString &notificationIdentifier, QNotifications::ClosedReason reason)
@@ -128,8 +126,6 @@ bool QPlatformNotificationEngineDarwin::isSupported() const
 
 uint QPlatformNotificationEngineDarwin::sendNotification(const QString &title, const QString &message, const QVariantMap &parameters, const QMap<QString, QString> &actions)
 {
-    QString icon = parameters.value(QStringLiteral("icon")).toString();
-
     UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
 
     // Check authorization status - use a semaphore but only if not on main thread
@@ -161,26 +157,98 @@ uint QPlatformNotificationEngineDarwin::sendNotification(const QString &title, c
     content.title = title.toNSString();
     content.body = message.toNSString();
 
-    // Add icon/image attachment if provided
-    if (!icon.isEmpty()) {
-        NSString *iconPath = icon.toNSString();
-        NSURL *iconURL = [NSURL fileURLWithPath:iconPath];
+    // Collect all image attachments from parameters
+    // Supported keys: "icon", "image", "attachment", "image1", "image2", etc.
+    NSMutableArray<UNNotificationAttachment *> *attachments = [NSMutableArray array];
+
+    // Helper function to add attachment from file path
+    // IMPORTANT: UNNotificationAttachment MOVES (not copies) files outside the app bundle!
+    // We need to copy the file to a safe location first to prevent deletion of the original.
+    auto addAttachmentFromPath = [&attachments](NSString *filePath, NSString *identifier) {
+        if (!filePath || [filePath length] == 0) {
+            return;
+        }
+
+        NSFileManager *fileManager = [NSFileManager defaultManager];
 
         // Check if file exists
-        if ([[NSFileManager defaultManager] fileExistsAtPath:iconPath]) {
-            NSError *attachmentError = nil;
-            UNNotificationAttachment *attachment = [UNNotificationAttachment attachmentWithIdentifier:@"notification-icon"
-                                                                                                  URL:iconURL
-                                                                                              options:nil
-                                                                                                error:&attachmentError];
-            if (attachment && !attachmentError) {
-                content.attachments = @[attachment];
-            } else {
-                NSLog(@"QtNotifications: Failed to create notification attachment from icon: %@, error: %@", iconPath, attachmentError.localizedDescription);
-            }
-        } else {
-            NSLog(@"QtNotifications: Icon file not found: %@", iconPath);
+        if (![fileManager fileExistsAtPath:filePath]) {
+            NSLog(@"QtNotifications: Image file not found: %@ (identifier: %@)", filePath, identifier);
+            return;
         }
+
+        NSURL *originalURL = [NSURL fileURLWithPath:filePath];
+        NSURL *bundleURL = [[NSBundle mainBundle] bundleURL];
+
+        // Check if file is inside app bundle - if so, it will be copied, not moved
+        BOOL isInBundle = [originalURL.path hasPrefix:bundleURL.path];
+
+        NSURL *attachmentURL = originalURL;
+
+        // If file is outside bundle, copy it to a temporary location to prevent deletion
+        if (!isInBundle) {
+            // Create a temporary file in the app's cache directory
+            NSURL *cacheDir = [[fileManager URLsForDirectory:NSCachesDirectory inDomains:NSUserDomainMask] firstObject];
+            if (cacheDir) {
+                NSString *fileName = [NSString stringWithFormat:@"notification-attachment-%@-%@",
+                                      identifier, [[NSUUID UUID] UUIDString]];
+                NSString *fileExtension = [originalURL pathExtension];
+                if ([fileExtension length] > 0) {
+                    fileName = [fileName stringByAppendingPathExtension:fileExtension];
+                }
+
+                NSURL *tempURL = [cacheDir URLByAppendingPathComponent:fileName];
+
+                NSError *copyError = nil;
+                BOOL copied = [fileManager copyItemAtURL:originalURL toURL:tempURL error:&copyError];
+
+                if (copied && !copyError) {
+                    attachmentURL = tempURL;
+                    NSLog(@"QtNotifications: Copied attachment file to cache: %@", tempURL.path);
+                } else {
+                    NSLog(@"QtNotifications: Failed to copy attachment file to cache: %@, error: %@",
+                          filePath, copyError.localizedDescription);
+                    // Fall back to using original - user should be aware it will be moved
+                    NSLog(@"QtNotifications: WARNING: Original file will be moved by macOS: %@", filePath);
+                }
+            }
+        }
+
+        NSError *attachmentError = nil;
+        UNNotificationAttachment *attachment = [UNNotificationAttachment attachmentWithIdentifier:identifier
+                                                                                              URL:attachmentURL
+                                                                                          options:nil
+                                                                                            error:&attachmentError];
+        if (attachment && !attachmentError) {
+            [attachments addObject:attachment];
+        } else {
+            NSLog(@"QtNotifications: Failed to create notification attachment from %@: %@, error: %@",
+                  identifier, attachmentURL.path, attachmentError.localizedDescription);
+            // Clean up copied file if attachment creation failed
+            if (!isInBundle && ![attachmentURL.path isEqualToString:filePath]) {
+                [fileManager removeItemAtURL:attachmentURL error:nil];
+            }
+        }
+    };
+
+    QString icon = parameters.value(QStringLiteral("icon")).toString();
+    if (!icon.isEmpty()) {
+        addAttachmentFromPath(icon.toNSString(), @"notification-icon");
+    }
+
+    QString image = parameters.value(QStringLiteral("image")).toString();
+    if (!image.isEmpty()) {
+        addAttachmentFromPath(image.toNSString(), @"notification-image");
+    }
+
+    QString attachment = parameters.value(QStringLiteral("attachment")).toString();
+    if (!attachment.isEmpty()) {
+        addAttachmentFromPath(attachment.toNSString(), @"notification-attachment");
+    }
+
+    // Set all attachments if any were added
+    if ([attachments count] > 0) {
+        content.attachments = attachments;
     }
 
     NSMutableArray *actionArray = [NSMutableArray array];

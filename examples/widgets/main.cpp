@@ -13,6 +13,7 @@
 #include <QtWidgets/QHeaderView>
 #include <QtWidgets/QAbstractItemView>
 #include <QtWidgets/QFileDialog>
+#include <QtWidgets/QScrollArea>
 #include <QtCore/QDateTime>
 #include <QtCore/QDebug>
 #include <QtCore/QDir>
@@ -67,21 +68,33 @@ private:
         // Build image-data structure for Linux if image is loaded
         if (!m_loadedImage.isNull()) {
             QVariantMap imageDataStruct = buildImageDataStructure(m_loadedImage);
+#ifdef Q_OS_LINUX
             if (!imageDataStruct.isEmpty()) {
                 params["image-data"] = imageDataStruct;
             }
+#endif
 
             QString tempPath = saveImageToTempFile(m_loadedImage);
+#ifdef Q_OS_WINDOWS
             params["appLogoOverride"] = tempPath;
+#endif
+#ifdef Q_OS_ANDROID
             params["smallIconPath"] = tempPath;
+#endif
+#ifdef Q_OS_IOS
+            params["image"] = tempPath;
+#endif
 
-            // For Android: pass icon data as QVariantMap with data, width, height, channels
-            QVariantMap iconDataMap;
-            iconDataMap["data"] = imageDataStruct["data"];
-            iconDataMap["width"] = imageDataStruct["width"];
-            iconDataMap["height"] = imageDataStruct["height"];
-            iconDataMap["channels"] = imageDataStruct["channels"];
-            params["largeIconData"] = iconDataMap;
+#ifdef Q_OS_ANDROID
+            if (!imageDataStruct.isEmpty()) {
+                QVariantMap iconDataMap;
+                iconDataMap["data"] = imageDataStruct["data"];
+                iconDataMap["width"] = imageDataStruct["width"];
+                iconDataMap["height"] = imageDataStruct["height"];
+                iconDataMap["channels"] = imageDataStruct["channels"];
+                params["largeIconData"] = iconDataMap;
+            }
+#endif
         }
 
         return params;
@@ -254,15 +267,18 @@ private:
     void setupUI()
     {
         QWidget *centralWidget = new QWidget(this);
-        setCentralWidget(centralWidget);
+        QScrollArea* scrollArea = new QScrollArea(this);
+        scrollArea->setWidget(centralWidget);
+        scrollArea->setWidgetResizable(true);
+        setCentralWidget(scrollArea);
 
         QVBoxLayout *mainLayout = new QVBoxLayout(centralWidget);
+        mainLayout->setContentsMargins(10, 10, 10, 10);
+        mainLayout->setSpacing(10);
 
-        // Title and message input group
         QGroupBox *inputGroup = new QGroupBox("Notification Content", this);
         QVBoxLayout *inputLayout = new QVBoxLayout(inputGroup);
 
-        // Title input
         QHBoxLayout *titleLayout = new QHBoxLayout();
         titleLayout->addWidget(new QLabel("Title:", this));
         titleEdit = new QLineEdit(this);
@@ -270,7 +286,6 @@ private:
         titleLayout->addWidget(titleEdit);
         inputLayout->addLayout(titleLayout);
 
-        // Message input
         QHBoxLayout *messageLayout = new QHBoxLayout();
         messageLayout->addWidget(new QLabel("Message:", this));
         messageEdit = new QTextEdit(this);
@@ -281,7 +296,6 @@ private:
 
         mainLayout->addWidget(inputGroup);
 
-        // Parameters group
         QGroupBox *parametersGroup = new QGroupBox("Parameters (Platform-specific)", this);
         QVBoxLayout *parametersLayout = new QVBoxLayout(parametersGroup);
 
@@ -306,7 +320,6 @@ private:
         paramButtonsLayout->addStretch();
         parametersLayout->addLayout(paramButtonsLayout);
 
-        // Add some common parameter examples
         int row = 0;
         parametersTable->insertRow(row);
         parametersTable->setItem(row, 0, new QTableWidgetItem("icon"));
@@ -321,16 +334,8 @@ private:
 
         mainLayout->addWidget(parametersGroup);
 
-        // Image Data group (for Linux image-data DBus structure)
-        QGroupBox *imageDataGroup = new QGroupBox("Image Data (Linux image-data)", this);
+        QGroupBox *imageDataGroup = new QGroupBox("Image Data", this);
         QVBoxLayout *imageDataLayout = new QVBoxLayout(imageDataGroup);
-
-        QLabel *imageDataHint = new QLabel(
-            "For Linux: Load an image to create image-data DBus structure (iiibiiay).\n"
-            "The structure contains: width, height, rowstride, has_alpha, bits_per_sample, channels, data.", this);
-        imageDataHint->setWordWrap(true);
-        imageDataHint->setStyleSheet("color: gray; font-style: italic;");
-        imageDataLayout->addWidget(imageDataHint);
 
         QHBoxLayout *imageButtonsLayout = new QHBoxLayout();
         QPushButton *loadFromResourceBtn = new QPushButton("Load from QRC", this);
@@ -362,7 +367,6 @@ private:
 
         mainLayout->addWidget(imageDataGroup);
 
-        // Buttons group
         QGroupBox *buttonsGroup = new QGroupBox("Send Notifications", this);
         QVBoxLayout *buttonsLayout = new QVBoxLayout(buttonsGroup);
 
@@ -374,7 +378,6 @@ private:
 
         mainLayout->addWidget(buttonsGroup);
 
-        // Status display
         QGroupBox *statusGroup = new QGroupBox("Status Log", this);
         QVBoxLayout *statusLayout = new QVBoxLayout(statusGroup);
         statusText = new QTextEdit(this);
@@ -383,7 +386,8 @@ private:
         statusLayout->addWidget(statusText);
         mainLayout->addWidget(statusGroup);
 
-        // Connect button signals
+        centralWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::MinimumExpanding);
+
         connect(simpleBtn, &QPushButton::clicked, this, &NotificationsWidget::sendSimpleNotification);
         connect(actionsBtn, &QPushButton::clicked, this, &NotificationsWidget::sendNotificationWithActions);
     }

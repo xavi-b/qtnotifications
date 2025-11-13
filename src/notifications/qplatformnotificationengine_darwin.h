@@ -32,7 +32,7 @@ public:
 private:
     DarwinNotificationDelegate* m_delegate;
     // Map from notification identifier (UUID string) to notification ID
-    mutable QHash<QString, uint> m_notificationIdMap;
+    QHash<QString, uint> m_notificationIdMap;
 };
 
 QPlatformNotificationEngine *qt_create_notification_engine_darwin();
