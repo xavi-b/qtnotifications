@@ -40,6 +40,8 @@
             \li \c appLogoOverride
             \li QString
             \li Path to app logo image for Windows toast notifications
+                \note QRC resource paths (e.g., \c ":/images/icon.png") are not supported.
+                Use temporary files for QRC images (see \l{Using QRC Images with Temporary Files}).
         \row
             \li \c hero
             \li QString
@@ -74,6 +76,9 @@
             \li \c icon
             \li QString
             \li Path to an icon image file that will be attached to the notification
+                \note QRC resource paths (e.g., \c ":/images/icon.png") are not supported.
+                Use temporary files for QRC images (see \l{Using QRC Images with Temporary Files}).
+                Files inside the app bundle are copied (not moved) by the system.
     \endtable
 
     \section1 Linux
@@ -100,6 +105,9 @@
             \li \c icon
             \li QString
             \li Path to an icon image file or icon name (file path or icon name)
+                \note QRC resource paths (e.g., \c ":/images/icon.png") are not supported.
+                Use temporary files for QRC images, or use the \c image-data parameter instead
+                (see \l{Using QRC Images with Temporary Files}).
         \row
             \li \c urgency
             \li int
@@ -141,10 +149,14 @@
             \li \c smallIconPath
             \li QString
             \li Path to an icon image file (support depends on platform capabilities)
+                \note QRC resource paths (e.g., \c ":/images/icon.png") are not supported.
+                Use temporary files for QRC images (see \l{Using QRC Images with Temporary Files}).
         \row
             \li \c largeIconPath
             \li QString
             \li Path to a large icon image file (support depends on platform capabilities)
+                \note QRC resource paths (e.g., \c ":/images/icon.png") are not supported.
+                Use temporary files for QRC images (see \l{Using QRC Images with Temporary Files}).
         \row
             \li \c smallIconData
             \li QVariantMap
@@ -156,6 +168,51 @@
             \li Data for a large icon image file (support depends on platform capabilities)
                 \note The data is a QVariantMap with the following keys: data, width, height, channels.
     \endtable
+
+    \section1 Using QRC Images with Temporary Files
+
+    Some notification engines require file system paths for image parameters (such as \c icon,
+    \c appLogoOverride, \c smallIconPath, etc.), and cannot directly use Qt Resource files
+    (QRC) which are accessed via paths like \c ":/images/icon.png".
+
+    To use images from your application's QRC resources with these engines, you need to:
+
+    \list 1
+        \li Load the image from the QRC resource into a \l{QImage}
+        \li Save it to a temporary file location
+        \li Use the temporary file path in the notification parameters
+    \endlist
+
+    \code
+    // Load image from QRC resource
+    QImage image(":/images/notification_icon.png");
+    if (!image.isNull()) {
+        // Save to temporary file
+        QString tempPath = QStandardPaths::writableLocation(QStandardPaths::TempLocation)
+                          + "/notification_icon.png";
+        image.save(tempPath);
+
+        // Use the temporary file path in notification parameters
+        QVariantMap params;
+        params["icon"] = tempPath;  // For Linux, macOS, iOS
+        params["appLogoOverride"] = tempPath;  // For Windows
+        params["smallIconPath"] = tempPath;  // For Android
+
+        notifications.sendNotification("Title", "Message", params);
+    }
+    \endcode
+
+    \note On macOS, the Darwin engine automatically copies files outside the app bundle to prevent
+    the original file from being moved by the system. However, for QRC resources, you still need
+    to save them to a temporary file first, as QRC paths cannot be used directly.
+
+    \note On Linux, you can alternatively use the \c image-data parameter with a QVariantMap
+    containing the image pixel data, which avoids the need for temporary files. See the Linux
+    engine documentation for details.
+
+    \note Temporary files created this way should be cleaned up by the system's temporary file
+    cleanup mechanisms, but you may want to manually remove them after the notification is sent
+    if you need to free up disk space immediately.
 
     \section1 Notification Actions
 
