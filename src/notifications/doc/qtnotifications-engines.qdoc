@@ -138,9 +138,23 @@
             \li Type
             \li Description
         \row
-            \li \c icon
+            \li \c smallIconPath
             \li QString
             \li Path to an icon image file (support depends on platform capabilities)
+        \row
+            \li \c largeIconPath
+            \li QString
+            \li Path to a large icon image file (support depends on platform capabilities)
+        \row
+            \li \c smallIconData
+            \li QVariantMap
+            \li Data for an icon image file (support depends on platform capabilities)
+                \note The data is a QVariantMap with the following keys: data, width, height, channels.
+        \row
+            \li \c largeIconData
+            \li QVariantMap
+            \li Data for a large icon image file (support depends on platform capabilities)
+                \note The data is a QVariantMap with the following keys: data, width, height, channels.
     \endtable
 
     \section1 Notification Actions

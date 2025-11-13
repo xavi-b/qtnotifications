@@ -73,6 +73,15 @@ private:
 
             QString tempPath = saveImageToTempFile(m_loadedImage);
             params["appLogoOverride"] = tempPath;
+            params["smallIconPath"] = tempPath;
+
+            // For Android: pass icon data as QVariantMap with data, width, height, channels
+            QVariantMap iconDataMap;
+            iconDataMap["data"] = imageDataStruct["data"];
+            iconDataMap["width"] = imageDataStruct["width"];
+            iconDataMap["height"] = imageDataStruct["height"];
+            iconDataMap["channels"] = imageDataStruct["channels"];
+            params["largeIconData"] = iconDataMap;
         }
 
         return params;

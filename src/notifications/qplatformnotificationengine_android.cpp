@@ -3,6 +3,8 @@
 #include <QtCore/qglobal.h>
 #include <QtCore/qhash.h>
 #include <QtCore/qstring.h>
+#include <QtCore/qbytearray.h>
+#include <QtCore/qvariant.h>
 
 #include <QtCore/qcoreapplication.h>
 #include <QtCore/qjnienvironment.h>
@@ -43,20 +45,74 @@ bool QPlatformNotificationEngineAndroid::isSupported() const
     return m_javaObject.isValid();
 }
 
+static QJniObject jniObjectFromQVariant(const QVariant &value)
+{
+    if (value.typeId() == QMetaType::QByteArray) {
+        QByteArray byteArray = value.toByteArray();
+        QJniEnvironment env;
+        JNIEnv *jniEnv = env.jniEnv();
+        if (jniEnv) {
+            jbyteArray javaByteArray = jniEnv->NewByteArray(byteArray.size());
+            jniEnv->SetByteArrayRegion(javaByteArray, 0, byteArray.size(),
+                                        reinterpret_cast<const jbyte*>(byteArray.constData()));
+            QJniObject jniObject = QJniObject(javaByteArray);
+            jniEnv->DeleteLocalRef(javaByteArray);
+            return jniObject;
+        }
+    } else if (value.typeId() == QMetaType::QString) {
+        return QJniObject::fromString(value.toString());
+    } else if (value.typeId() == QMetaType::Int || value.typeId() == QMetaType::LongLong) {
+        jint intValue = static_cast<jint>(value.toLongLong());
+        return QJniObject("java/lang/Integer", "(I)V", intValue);
+    }
+    return QJniObject();
+}
+
 uint QPlatformNotificationEngineAndroid::sendNotification(const QString &title,
                                                           const QString &message,
                                                           const QVariantMap &parameters,
                                                           const QMap<QString, QString> &actions)
 {
-    QString icon = parameters.value(QStringLiteral("icon")).toString();
-
     if (!m_javaObject.isValid()) {
         qWarning("QtNotifications Android: Java object not initialized");
         return 0;
     }
 
-    // Robustly create Java HashMap
+    QJniObject javaParameters("java/util/HashMap", "()V");
     QJniObject javaActions("java/util/HashMap", "()V");
+
+    qDebug() << "QtNotifications Android: Parameters" << parameters;
+    for (auto it = parameters.constBegin(); it != parameters.constEnd(); ++it) {
+        QJniObject key = QJniObject::fromString(it.key());
+        QJniObject value;
+
+        if (it.value().typeId() == QMetaType::QVariantMap) {
+            // Handle QVariantMap (e.g., for iconData structures)
+            QVariantMap map = it.value().toMap();
+            QJniObject javaMap("java/util/HashMap", "()V");
+            for (auto mapIt = map.constBegin(); mapIt != map.constEnd(); ++mapIt) {
+                QJniObject mapKey = QJniObject::fromString(mapIt.key());
+                QJniObject mapValue = jniObjectFromQVariant(mapIt.value());
+
+                if (mapValue.isValid()) {
+                    javaMap.callObjectMethod("put",
+                                             "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                                             mapKey.object<jobject>(),
+                                             mapValue.object<jobject>());
+                }
+            }
+            value = javaMap;
+        } else {
+            value = jniObjectFromQVariant(it.value());
+        }
+
+        if (value.isValid()) {
+            javaParameters.callObjectMethod("put",
+                                            "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                                            key.object<jobject>(),
+                                            value.object<jobject>());
+        }
+    }
 
     qDebug() << "QtNotifications Android: Actions" << actions.size();
     for (auto it = actions.constBegin(); it != actions.constEnd(); ++it) {
@@ -71,10 +127,10 @@ uint QPlatformNotificationEngineAndroid::sendNotification(const QString &title,
     // Call Java method
     jint result = m_javaObject.callMethod<jint>(
         "sendNotification",
-        "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map)I",
+        "(Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/util/Map;)I",
         QJniObject::fromString(title).object<jstring>(),
         QJniObject::fromString(message).object<jstring>(),
-        QJniObject::fromString(icon).object<jstring>(),
+        javaParameters.object<jobject>(),
         javaActions.object<jobject>());
 
     return result;
